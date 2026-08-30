@@ -1,12 +1,32 @@
 import { describe, expect, it } from 'vitest'
 
-import { GALLERY_BUCKET, VOICE_BUCKET } from '../../src/lib/storage'
-import { resolveStorageUrl } from '../../src/server/storage.server'
+import {
+  GALLERY_BUCKET,
+  VOICE_BUCKET,
+  extractStorageKeyFromPath,
+  resolveStorageUrl,
+} from '../../src/server/storage.server'
 
 describe('Supabase Storage Buckets & Media Configuration', () => {
   it('defines correct storage bucket identifiers', () => {
     expect(GALLERY_BUCKET).toBe('club-gallery')
     expect(VOICE_BUCKET).toBe('club-voice')
+  })
+
+  it('extracts storage key correctly from relative paths and full URLs', () => {
+    expect(extractStorageKeyFromPath('announcement-123.webm')).toBe(
+      'announcement-123.webm',
+    )
+    expect(
+      extractStorageKeyFromPath(
+        'https://example.supabase.co/storage/v1/object/public/club-voice/announcement-123.webm',
+      ),
+    ).toBe('announcement-123.webm')
+    expect(
+      extractStorageKeyFromPath(
+        'https://example.supabase.co/storage/v1/object/public/club-gallery/photo-456.jpg?t=123',
+      ),
+    ).toBe('photo-456.jpg')
   })
 
   it('resolves storage URLs correctly for relative paths and external URLs', () => {

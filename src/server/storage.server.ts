@@ -39,11 +39,36 @@ export function getSupabaseAdminClient() {
   return supabaseAdminInstance
 }
 
+/**
+ * Extracts storage object key from relative path or full storage URL.
+ */
+export function extractStorageKeyFromPath(pathOrUrl: string): string {
+  if (!pathOrUrl) return ''
+  if (pathOrUrl.includes('/club-voice/')) {
+    return (
+      pathOrUrl.split('/club-voice/')[1]?.split('?')[0] ||
+      pathOrUrl.split('/').pop() ||
+      pathOrUrl
+    )
+  }
+  if (pathOrUrl.includes('/club-gallery/')) {
+    return (
+      pathOrUrl.split('/club-gallery/')[1]?.split('?')[0] ||
+      pathOrUrl.split('/').pop() ||
+      pathOrUrl
+    )
+  }
+  return pathOrUrl.includes('/')
+    ? pathOrUrl.split('/').pop() || pathOrUrl
+    : pathOrUrl
+}
+
 export function resolveStorageUrl(
   bucket: string,
   storagePath: string,
   baseUrl?: string,
 ): string {
+  if (!storagePath) return ''
   if (storagePath.startsWith('http://') || storagePath.startsWith('https://')) {
     return storagePath
   }
@@ -216,15 +241,12 @@ export async function deleteGalleryPhotoServer(photoId: string) {
     throw new Error('Sawirkan lama helin')
   }
 
-  // Delete from Storage if it's an object key
-  if (
-    !photo.storagePath.startsWith('http://') &&
-    !photo.storagePath.startsWith('https://')
-  ) {
+  const fileName = extractStorageKeyFromPath(photo.storagePath)
+  if (fileName) {
     const supabase = getSupabaseAdminClient()
     const { error: removeError } = await supabase.storage
       .from(photo.storageBucket)
-      .remove([photo.storagePath])
+      .remove([fileName])
 
     if (removeError) {
       throw new Error(
@@ -238,7 +260,7 @@ export async function deleteGalleryPhotoServer(photoId: string) {
 }
 
 /**
- * Uploads voice announcement audio, safely persisting new object before deleting old (H6-02).
+ * Uploads voice announcement audio, safely persisting new object before deleting old (H6-02 & Recheck 7).
  */
 export async function uploadVoiceAnnouncementServer(input: {
   base64Audio: string
@@ -285,13 +307,11 @@ export async function uploadVoiceAnnouncementServer(input: {
     throw new Error(`Ku guuldareystay shubista codka: ${uploadError.message}`)
   }
 
-  const publicUrl = resolveStorageUrl(VOICE_BUCKET, objectPath)
-
   try {
     await db
       .update(clubSettings)
       .set({
-        announcementAudioPath: publicUrl,
+        announcementAudioPath: objectPath,
       })
       .where(eq(clubSettings.id, 'default'))
   } catch (dbError: any) {
@@ -311,33 +331,28 @@ export async function uploadVoiceAnnouncementServer(input: {
     )
   }
 
-  // Best-effort cleanup of old audio object AFTER new audio is safely persisted (H6-02)
-  if (
-    oldAudioPath &&
-    !oldAudioPath.startsWith('http://') &&
-    !oldAudioPath.startsWith('https://')
-  ) {
-    const fileName = oldAudioPath.includes('/')
-      ? oldAudioPath.split('/').pop()
-      : oldAudioPath
-    if (fileName) {
+  // Best-effort cleanup of old audio object AFTER new audio is safely persisted (Recheck 7)
+  if (oldAudioPath) {
+    const oldFileName = extractStorageKeyFromPath(oldAudioPath)
+    if (oldFileName) {
       const { error: oldRemoveError } = await supabase.storage
         .from(VOICE_BUCKET)
-        .remove([fileName])
+        .remove([oldFileName])
       if (oldRemoveError) {
         console.warn(
-          `Could not remove old voice object ${fileName}:`,
+          `Could not remove old voice object ${oldFileName}:`,
           oldRemoveError.message,
         )
       }
     }
   }
 
+  const publicUrl = resolveStorageUrl(VOICE_BUCKET, objectPath)
   return { publicUrl, storagePath: objectPath }
 }
 
 /**
- * Deletes current voice announcement audio and cleans up Storage object (H6-01).
+ * Deletes current voice announcement audio and cleans up Storage object (H6-01 & Recheck 7).
  */
 export async function deleteVoiceAnnouncementServer() {
   const db = getDatabase()
@@ -348,13 +363,10 @@ export async function deleteVoiceAnnouncementServer() {
     .limit(1)
 
   if (existingSettings?.announcementAudioPath) {
-    const oldPath = existingSettings.announcementAudioPath
-    const fileName = oldPath.includes('/') ? oldPath.split('/').pop() : oldPath
-    if (
-      fileName &&
-      !oldPath.startsWith('http://') &&
-      !oldPath.startsWith('https://')
-    ) {
+    const fileName = extractStorageKeyFromPath(
+      existingSettings.announcementAudioPath,
+    )
+    if (fileName) {
       const supabase = getSupabaseAdminClient()
       const { error: removeError } = await supabase.storage
         .from(VOICE_BUCKET)

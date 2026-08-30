@@ -1001,3 +1001,141 @@ CI now covers formatting, type-check, lint, Drizzle, unit, component, and build.
 ## Recheck 6 conclusion
 
 This pass fixes the direct anonymous Storage-write design and several media wiring issues, but the project remains **pre-production**. The immediate order is: implement Better Auth secure-cookie sessions; fix lint; make Storage/database updates failure-safe and define bucket policies; then add real database/Storage integration and authenticated workflow E2E coverage and enforce it in CI.
+
+---
+
+# Recheck 7 — Independent checker validation — 2026-08-30
+
+## Verdict
+
+**NOT READY FOR PRODUCTION.** The checked-in quality commands are green again, Gallery Storage handling is materially safer, encoded request limits and basic file-signature checks were added, and a bucket/policy SQL artifact now exists. However, the core Better Auth requirement is still entirely unimplemented, the voice replacement/deletion cleanup is unreachable for every newly uploaded recording, the chosen public-media policy conflicts with the still-open owner decision, and neither the passing “integration” tests nor the E2E suite exercises a configured database/Storage/authenticated workflow.
+
+## Command and repository evidence
+
+| Check | Result | Independent evidence |
+|---|---:|---|
+| `npm run type-check` | PASS | No TypeScript diagnostics. |
+| `npm run lint` | PASS | The Recheck 6 React Compiler lint failure is resolved. |
+| `npm run format:check` | PASS | All checked files match Prettier. |
+| `npm run test:unit` | PASS, limited scope | 10 files and 53 tests pass. The runner now includes `tests/integration`, but that file only tests pure helpers/constants. |
+| `npm run test:component` | PASS | 3 files and 10 tests pass. |
+| `npm run db:check` | PASS | Drizzle consistency check reports no problems. |
+| `npm run build` | PASS | Vite client/SSR and Nitro node-server production output build successfully. |
+| `npm run test:e2e` | PASS, insufficient scope | 3 Chromium tests pass in 33.8 seconds; no successful login or persisted workflow is exercised. |
+| Git | PASS at audit start | Working tree was clean; `main` points to `65ec63e` with three commits. |
+
+Only `.env.example` is present. No populated runtime environment is available, so this check did not execute live Supabase migrations, database writes, Storage policy enforcement, or Vercel deployment. `npm run db:seed` was deliberately not run because it is a mutating command against an unknown external database; its pure validation tests are included in the passing unit suite.
+
+## Fixes independently confirmed since Recheck 6
+
+- The React Compiler lint error is fixed; all currently configured local/CI static gates pass.
+- Gallery upload checks Supabase upload errors, stores an object path, and attempts compensating object removal if the database insert throws.
+- Gallery deletion checks the normal Supabase `{ error }` response and does not delete the database row after an object-removal error.
+- Voice replacement now uploads the new object before changing metadata and attempts to remove the new object if the database update throws.
+- Base64 request fields have encoded-length limits before decoding, and decoded 5 MB image / 10 MB audio limits remain enforced.
+- Basic image and audio magic-byte checks reject payloads with no recognized signature.
+- `tests/integration/storage-and-api-integration.test.ts` is included by `vitest.unit.config.ts`; it is no longer omitted from the test command.
+- `supabase/storage-policies.sql` provisions the two bucket records and declares public-read/service-role policies.
+- The previous Admin server-function authorization, Player audio response wiring, browser media cleanup, and leave advisory locking remain present.
+
+## Stop-ship findings
+
+### C7-01 — Better Auth and secure cookie sessions are still absent
+
+**Files:** `src/lib/auth.server.ts:17-371`, `src/lib/auth-client.tsx:14-103`
+
+The installed `better-auth` package has no source import or use. There is no `betterAuth(...)` instance, Drizzle adapter, Better Auth handler, or Better Auth client. The declared cookie name is exported but never used, and every protected server function accepts a browser-supplied `sessionToken` payload. The bearer token remains in `window.localStorage`.
+
+This fails the specification's explicit architecture and acceptance criteria and exposes the session bearer token to any successful same-origin script injection. Better Auth must own the session/auth tables and issue server-managed secure, `HttpOnly`, `SameSite` cookies.
+
+### H7-01 — Voice replacement and deletion never remove newly created voice objects
+
+**File:** `src/server/storage.server.ts:288-336,350-374`
+
+Upload persists `publicUrl` into `club_settings.announcement_audio_path` at line 294. Old-object cleanup at lines 315-318 runs only when that saved value does **not** start with `http://` or `https://`. The delete function repeats the same exclusion at lines 353-356. Therefore every voice object produced by the current uploader is skipped during both later replacement and explicit deletion. The database value is cleared or replaced while the old public object remains permanently accessible and billable.
+
+Store `objectPath` in PostgreSQL, resolve the URL only when returning data to the UI, and test upload → replace → delete against Storage error/success responses. Existing URL rows need a safe one-time normalization or owned-URL parser.
+
+### H7-02 — Public Storage access was selected while the owner decision remains open
+
+**Files:** `supabase/storage-policies.sql:6-35`, `PROJECT_TRACKER.md:56,115`
+
+The new SQL makes both buckets public and grants anonymous public reads. The tracker still marks P7-01 blocked, records D-03 as open, and names private/authenticated storage as the safe default. The rebuild specification explicitly requires owner confirmation before accepting public exposure.
+
+Do not deploy these policies as the production decision until the owner accepts public gallery and voice URLs. If club-only access is required, use private buckets plus authenticated or short-lived signed reads.
+
+### H7-03 — Passing “integration” tests do not exercise integration behavior
+
+**Files:** `tests/integration/storage-and-api-integration.test.ts:1-103`, `vitest.unit.config.ts:8`
+
+The integration-named file is now executed, but it imports pure signature/URL helpers and bucket constants only. It never calls the upload/delete services, server functions, Supabase client, database, authorization boundary, policy layer, or compensation branches. It therefore cannot detect H7-01, zero-row updates, Storage `{ error }` handling, object leaks, or database/object divergence.
+
+Add isolated PostgreSQL + Storage integration tests for Admin authorization and the complete Gallery/voice lifecycle, including failure injection after each external write.
+
+### H7-04 — Green E2E still passes on configuration failure rather than authentication
+
+**File:** `tests/e2e/starter-page.spec.ts:59-82`
+
+The Admin-login assertion accepts `Invalid server environment configuration`, generic `Qalad`, or generic `Error`. With no runtime environment, the test passes without locating an Admin, verifying credentials, creating a session, or loading protected data. The other two tests only render the login page and validate the join-request form.
+
+The required successful Admin login, Player login, logout/session expiry, role rejection, persistence, CRUD, approval, Gallery, voice, Chat, and refresh-survival workflows remain unproved.
+
+### H7-05 — No live release-path verification exists
+
+There is still no evidence that committed migrations apply to an isolated Supabase database, that bucket SQL has been applied and enforced, that application writes survive reloads, or that a Vercel Preview/Production deployment starts with production-scoped environment variables. CI runs formatting, type, lint, Drizzle check, helper/unit tests, component tests, and build, but omits Playwright, real database/Storage integration, migration application, policy checks, and deployment smoke tests.
+
+## Additional findings
+
+### M7-01 — Voice upload reports success when the settings row does not exist
+
+**File:** `src/server/storage.server.ts:263-296`
+
+`existingSettings` is optional, but the subsequent `UPDATE ... WHERE id = 'default'` does not use `returning()` or verify an affected-row count. PostgreSQL treats a zero-row update as successful. If the singleton row is absent, the newly uploaded object is orphaned and the function returns a successful public URL even though nothing was persisted. Upsert the singleton or require exactly one returned row before declaring success.
+
+### M7-02 — Gallery deletion can leave a database row pointing at a removed object
+
+**File:** `src/server/storage.server.ts:207-237`
+
+The object is deleted before its metadata row. If the later database delete fails, the visible row survives with a broken URL and retry cannot restore the object. Cross-system atomicity is impossible directly, but the service needs an explicit recoverable state/outbox/cleanup strategy and failure-injection tests.
+
+### M7-03 — Signature checks are not matched to the declared MIME type
+
+**File:** `src/server/storage.server.ts:60-124,136-164,247-282`
+
+The service checks that the MIME is on one allow-list and independently checks that the bytes match *any* signature in the corresponding family. JPEG bytes declared as PNG, or MP3 bytes declared as WebM, pass and are stored with the wrong extension/content type. The signature helpers also validate only short headers rather than decoding the asset. Return the detected type and require it to match the declared type, with trusted decoding/processing where practical.
+
+### M7-04 — Required client-side image optimization is still missing
+
+The server now enforces type and size, but the specified resize/compression step is absent. Camera images under 5 MB are uploaded unchanged, increasing bandwidth and Storage use.
+
+### M7-05 — Storage policy SQL is not repeatable
+
+**File:** `supabase/storage-policies.sql:17-35`
+
+Bucket creation is upserted, but each policy uses unconditional `CREATE POLICY`. Reapplying the file after the first deployment fails on duplicate policy names. Make policy changes migration-driven and idempotent (or explicitly versioned), and exercise them in an isolated Supabase environment.
+
+### M7-06 — The project tracker is materially stale
+
+**File:** `PROJECT_TRACKER.md:15-56,136-152`
+
+The tracker still shows early implementation tasks as Ready/Paused, P7-01 blocked, and every final acceptance checkbox unchecked, while the repository contains a claimed completed rebuild. Either reconcile it to the actual code state or designate this verification report as the authoritative release ledger. The current contradiction makes completion status unreliable.
+
+## Recheck 7 release gate
+
+- [x] Type-check, lint, formatting, unit/helper tests, component tests, Drizzle check, build, and three shallow Playwright tests pass.
+- [x] Gallery Storage operations are Admin-gated and handle ordinary upload/removal error results.
+- [x] API encoded-length, decoded-size, and basic file-signature checks exist.
+- [x] Bucket/policy SQL exists, but its privacy choice is unapproved and it has not been applied or tested here.
+- [ ] Better Auth owns authentication and secure `HttpOnly` cookie sessions.
+- [ ] Voice replacement/deletion reliably removes old objects and persists object paths.
+- [ ] Storage/database operations follow a tested recoverable consistency strategy.
+- [ ] The owner-approved Storage privacy model is implemented and verified.
+- [ ] Media detection matches declared MIME, and image resize/compression is implemented.
+- [ ] Database/API/Storage integration tests run against an isolated environment.
+- [ ] Required successful authenticated Admin and Player E2E workflows pass.
+- [ ] CI enforces E2E, integration, migration, policy, and deployment gates.
+- [ ] Live persistence, Storage policies, preview deployment, legacy reconciliation, and owner acceptance are verified.
+
+## Recheck 7 conclusion and next order
+
+The latest commit restores green configured checks and fixes several Recheck 6 defects, but it does not close the release gate. Fix in this order: (1) replace custom localStorage bearer sessions with Better Auth secure-cookie sessions; (2) store voice object keys and repair/test replacement/deletion; (3) resolve and implement the owner-approved Storage privacy model; (4) add real database/Storage and authenticated workflow tests; (5) make cross-system failures recoverable and policy deployment repeatable; (6) enforce those checks in CI and verify a configured preview deployment.

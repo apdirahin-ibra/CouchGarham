@@ -28,6 +28,7 @@ import { getAttendanceForDate } from './attendance.server'
 import { getActiveRoster } from './players.server'
 import { getPlayerLeaves, getRequestsInboxAdmin } from './requests.server'
 import { getPlayerMonthlyStats } from './stats.server'
+import { resolveStorageUrl, VOICE_BUCKET } from './storage.server'
 
 /* ==================== WAANO (TIPS) ==================== */
 
@@ -130,7 +131,12 @@ export async function getClubSettings(): Promise<ClubSettings> {
     settings = inserted
   }
 
-  return settings
+  return {
+    ...settings,
+    announcementAudioPath: settings.announcementAudioPath
+      ? resolveStorageUrl(VOICE_BUCKET, settings.announcementAudioPath)
+      : null,
+  }
 }
 
 export async function updateClubSettings(input: {
