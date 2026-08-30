@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, BookOpen, RefreshCw } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
@@ -11,7 +11,7 @@ export function PlayerRulesTab() {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
-  const loadRules = () => {
+  const loadRules = useCallback(() => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -27,11 +27,11 @@ export function PlayerRulesTab() {
       .finally(() => {
         setIsLoading(false)
       })
-  }
+  }, [token])
 
   useEffect(() => {
     loadRules()
-  }, [token])
+  }, [loadRules])
 
   return (
     <div className="space-y-6 pb-12">

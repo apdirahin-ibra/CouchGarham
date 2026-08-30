@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
   Calendar,
@@ -38,7 +38,7 @@ export function AdminDashboardTab({
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
-  const loadDashboard = () => {
+  const loadDashboard = useCallback(() => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -54,11 +54,11 @@ export function AdminDashboardTab({
       .finally(() => {
         setIsLoading(false)
       })
-  }
+  }, [token])
 
   useEffect(() => {
     loadDashboard()
-  }, [token])
+  }, [loadDashboard])
 
   const attendanceCounts = dashboardData?.attendanceCounts ?? {
     total: 0,

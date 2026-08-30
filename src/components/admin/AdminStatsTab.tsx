@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, Edit2, RefreshCw } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
@@ -38,7 +38,7 @@ export function AdminStatsTab() {
   const [editErrors, setEditErrors] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -52,11 +52,11 @@ export function AdminStatsTab() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [currentMonth, token])
 
   useEffect(() => {
     loadStats()
-  }, [token])
+  }, [loadStats])
 
   const openEditModal = (player: PlayerStat) => {
     setEditingStat(player)

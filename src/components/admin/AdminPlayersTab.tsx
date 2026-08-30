@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
   Edit,
@@ -61,7 +61,7 @@ export function AdminPlayersTab() {
 
   const [viewingPlayer, setViewingPlayer] = useState<any>(null)
 
-  const loadPlayers = async () => {
+  const loadPlayers = useCallback(async () => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -73,11 +73,11 @@ export function AdminPlayersTab() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     loadPlayers()
-  }, [token])
+  }, [loadPlayers])
 
   const openAddModal = () => {
     setEditingPlayer(null)

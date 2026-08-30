@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowDownCircle, ArrowUpCircle, Plus, Trash2 } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
@@ -37,7 +37,7 @@ export function AdminFinanceTab() {
   const [entryDate, setEntryDate] = useState(getTodayDateString())
   const [isSaving, setIsSaving] = useState(false)
 
-  const loadLedger = async () => {
+  const loadLedger = useCallback(async () => {
     if (!token) return
     try {
       const data = await getFinanceLedgerFn({ data: { sessionToken: token } })
@@ -56,11 +56,11 @@ export function AdminFinanceTab() {
     } catch (err) {
       console.warn('Finance load notice:', err)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     loadLedger()
-  }, [token])
+  }, [loadLedger])
 
   const handleAddEntry = async (e: React.FormEvent) => {
     e.preventDefault()

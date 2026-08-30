@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertCircle,
   Image as ImageIcon,
@@ -9,11 +9,11 @@ import {
 } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
-import { deleteGalleryFile, uploadGalleryFile } from '../../lib/storage'
 import {
   addGalleryPhotoFn,
   deleteGalleryPhotoFn,
   getGalleryPhotosFn,
+  uploadGalleryPhotoFn,
 } from '../../server/api'
 import { Button, Dialog, SectionTitle, TextField } from '../ui'
 import { useToast } from '../ui/toast-context'
@@ -21,9 +21,13 @@ import { useToast } from '../ui/toast-context'
 type PhotoItem = {
   id: string
   storagePath: string
+  url?: string
   caption: string | null
   createdAt: Date | string
 }
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 export function AdminGalleryTab() {
   const { token } = useAuth()
@@ -42,7 +46,7 @@ export function AdminGalleryTab() {
   const [caption, setCaption] = useState('')
   const [isUploading, setIsUploading] = useState(false)
 
-  const loadPhotos = async () => {
+  const loadPhotos = useCallback(async () => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -54,19 +58,42 @@ export function AdminGalleryTab() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     loadPhotos()
-  }, [token])
+  }, [loadPhotos])
+
+  // Cleanup object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      setSelectedFile(file)
-      setPreviewUrl(URL.createObjectURL(file))
-      setManualUrl('')
+    if (!file) return
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      notify('Fadlan soo dooro sawir ah JPG, PNG, ama WEBP.', 'danger')
+      return
     }
+
+    if (file.size > MAX_FILE_SIZE) {
+      notify('Cabbirka sawirku waa inuu ka yaryahay 5 MB.', 'danger')
+      return
+    }
+
+    if (previewUrl && previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl)
+    }
+
+    setSelectedFile(file)
+    setPreviewUrl(URL.createObjectURL(file))
+    setManualUrl('')
   }
 
   const handleAddPhoto = async (e: React.FormEvent) => {
@@ -75,25 +102,50 @@ export function AdminGalleryTab() {
     setIsUploading(true)
 
     try {
-      let finalStoragePath = manualUrl.trim()
-
       if (selectedFile) {
-        // Upload directly to Supabase Storage
-        const uploadResult = await uploadGalleryFile(selectedFile)
-        finalStoragePath = uploadResult.publicUrl
+        // Read file as base64 string
+        const reader = new FileReader()
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            const result = reader.result as string
+            const base64 = result.split(',')[1] || ''
+            resolve(base64)
+          }
+          reader.onerror = reject
+          reader.readAsDataURL(selectedFile)
+        })
+
+        const base64Data = await base64Promise
+
+        const created = await uploadGalleryPhotoFn({
+          data: {
+            sessionToken: token,
+            base64Data,
+            mimeType: selectedFile.type,
+            caption: caption.trim() || null,
+          },
+        })
+
+        setPhotos((current) => [created, ...current])
+      } else {
+        const created = await addGalleryPhotoFn({
+          data: {
+            sessionToken: token,
+            storagePath: manualUrl.trim(),
+            caption: caption.trim() || null,
+          },
+        })
+        setPhotos((current) => [
+          { ...created, url: created.storagePath },
+          ...current,
+        ])
       }
 
-      const created = await addGalleryPhotoFn({
-        data: {
-          sessionToken: token,
-          storagePath: finalStoragePath,
-          caption: caption.trim() || null,
-        },
-      })
-
-      setPhotos((current) => [created, ...current])
       setIsModalOpen(false)
       setSelectedFile(null)
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl)
+      }
       setPreviewUrl('')
       setManualUrl('')
       setCaption('')
@@ -108,16 +160,9 @@ export function AdminGalleryTab() {
   const handleDeletePhoto = async (photo: PhotoItem) => {
     if (!token) return
     try {
-      // Delete from DB
       await deleteGalleryPhotoFn({
         data: { sessionToken: token, id: photo.id },
       })
-
-      // Delete from Storage if it's a Supabase path
-      if (photo.storagePath && !photo.storagePath.startsWith('http')) {
-        await deleteGalleryFile(photo.storagePath)
-      }
-
       setPhotos((current) => current.filter((p) => p.id !== photo.id))
       notify('Sawirkii waa la tirtiray', 'neutral')
     } catch (err: any) {
@@ -141,6 +186,9 @@ export function AdminGalleryTab() {
           variant="primary"
           onClick={() => {
             setSelectedFile(null)
+            if (previewUrl && previewUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(previewUrl)
+            }
             setPreviewUrl('')
             setManualUrl('')
             setCaption('')
@@ -188,7 +236,7 @@ export function AdminGalleryTab() {
                 className="block w-full aspect-square overflow-hidden bg-pitch-deep cursor-pointer"
               >
                 <img
-                  src={photo.storagePath}
+                  src={photo.url || photo.storagePath}
                   alt={photo.caption || 'Sawirka kooxda'}
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   loading="lazy"
@@ -227,7 +275,7 @@ export function AdminGalleryTab() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -268,6 +316,9 @@ export function AdminGalleryTab() {
               setManualUrl(e.target.value)
               if (e.target.value) {
                 setSelectedFile(null)
+                if (previewUrl && previewUrl.startsWith('blob:')) {
+                  URL.revokeObjectURL(previewUrl)
+                }
                 setPreviewUrl('')
               }
             }}
@@ -311,7 +362,7 @@ export function AdminGalleryTab() {
           <div className="space-y-3">
             <div className="overflow-hidden rounded-xl border border-club-border bg-pitch-deep">
               <img
-                src={activePhoto.storagePath}
+                src={activePhoto.url || activePhoto.storagePath}
                 alt={activePhoto.caption || 'Sawir'}
                 className="w-full max-h-[60vh] object-contain"
               />

@@ -56,14 +56,15 @@ test.describe('Best Official App - Authentication & Navigation Flows', () => {
     ).toBeVisible()
   })
 
-  test('validates admin login failure on wrong credentials', async ({
-    page,
-  }) => {
+  test('validates admin login form and error feedback', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
     const adminTab = page.getByRole('button', { name: 'Maamule' })
     await adminTab.click()
+
+    await expect(page.getByLabel('Magaca Maamulaha (Username)')).toBeVisible()
+    await expect(page.getByLabel('Furaha Sirta ah (Password)')).toBeVisible()
 
     await page.getByLabel('Magaca Maamulaha (Username)').fill('admin')
     await page
@@ -75,9 +76,9 @@ test.describe('Best Official App - Authentication & Navigation Flows', () => {
     })
     await submitBtn.click()
 
-    // Verify error notification, auth rejection, or fail-closed environment protection
+    // Assert that error feedback is rendered
     await expect(page.locator('body')).toContainText(
-      /Qalad|Lama helin|sirta ah|Invalid server environment configuration|error/i,
+      /Magaca maamulaha ama furaha sirta ah waa qalad|Qalad|Invalid server environment configuration|Error/i,
     )
   })
 })

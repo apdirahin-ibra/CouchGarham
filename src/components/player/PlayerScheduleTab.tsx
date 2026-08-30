@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, Clock, MapPin, RefreshCw } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
@@ -18,7 +18,7 @@ export function PlayerScheduleTab() {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
-  const loadSchedule = () => {
+  const loadSchedule = useCallback(() => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -32,11 +32,11 @@ export function PlayerScheduleTab() {
       .finally(() => {
         setIsLoading(false)
       })
-  }
+  }, [token])
 
   useEffect(() => {
     loadSchedule()
-  }, [token])
+  }, [loadSchedule])
 
   return (
     <div className="space-y-6 pb-12">

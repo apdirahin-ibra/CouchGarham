@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
   MessageSquare,
@@ -49,43 +49,48 @@ export function PlayerChatTab() {
   const [inputText, setInputText] = useState('')
   const [isSending, setIsSending] = useState(false)
 
-  const loadData = async (isSilent = false) => {
-    if (!token) return
-    if (!isSilent) {
-      setIsLoading(true)
-      setLoadError('')
-    }
-    try {
-      const [chatList, dirList] = await Promise.all([
-        getChatMessagesFn({ data: { sessionToken: token } }),
-        getTeamDirectoryFn({ data: { sessionToken: token } }),
-      ])
-
-      if (chatList) {
-        setMessages(
-          chatList.map((m: any) => ({
-            id: m.id,
-            authorRole: m.authorRole,
-            authorName: m.authorNameSnapshot,
-            text: m.text,
-            time: formatSomaliDate(m.createdAt),
-          })),
-        )
-      }
-
-      if (dirList) {
-        setDirectory(dirList as any)
-      }
-    } catch (err: any) {
+  const loadData = useCallback(
+    async (isSilent = false) => {
+      if (!token) return
       if (!isSilent) {
-        setLoadError(err?.message || 'Qalad ayaa dhacay soo dejinta fariimaha')
+        setIsLoading(true)
+        setLoadError('')
       }
-    } finally {
-      if (!isSilent) {
-        setIsLoading(false)
+      try {
+        const [chatList, dirList] = await Promise.all([
+          getChatMessagesFn({ data: { sessionToken: token } }),
+          getTeamDirectoryFn({ data: { sessionToken: token } }),
+        ])
+
+        if (chatList) {
+          setMessages(
+            chatList.map((m: any) => ({
+              id: m.id,
+              authorRole: m.authorRole,
+              authorName: m.authorNameSnapshot,
+              text: m.text,
+              time: formatSomaliDate(m.createdAt),
+            })),
+          )
+        }
+
+        if (dirList) {
+          setDirectory(dirList as any)
+        }
+      } catch (err: any) {
+        if (!isSilent) {
+          setLoadError(
+            err?.message || 'Qalad ayaa dhacay soo dejinta fariimaha',
+          )
+        }
+      } finally {
+        if (!isSilent) {
+          setIsLoading(false)
+        }
       }
-    }
-  }
+    },
+    [token],
+  )
 
   useEffect(() => {
     loadData()
@@ -94,7 +99,7 @@ export function PlayerChatTab() {
       loadData(true)
     }, 5000)
     return () => clearInterval(interval)
-  }, [token])
+  }, [loadData])
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()

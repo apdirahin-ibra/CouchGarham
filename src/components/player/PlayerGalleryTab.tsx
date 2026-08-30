@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
@@ -8,6 +8,7 @@ import { Button, Dialog, SectionTitle } from '../ui'
 type PhotoItem = {
   id: string
   storagePath: string
+  url?: string
   caption: string | null
   createdAt: Date | string
 }
@@ -19,7 +20,7 @@ export function PlayerGalleryTab() {
   const [loadError, setLoadError] = useState('')
   const [activePhoto, setActivePhoto] = useState<PhotoItem | null>(null)
 
-  const loadPhotos = () => {
+  const loadPhotos = useCallback(() => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -33,11 +34,11 @@ export function PlayerGalleryTab() {
       .finally(() => {
         setIsLoading(false)
       })
-  }
+  }, [token])
 
   useEffect(() => {
     loadPhotos()
-  }, [token])
+  }, [loadPhotos])
 
   return (
     <div className="space-y-6 pb-12">
@@ -85,7 +86,7 @@ export function PlayerGalleryTab() {
                 className="block w-full aspect-square overflow-hidden bg-pitch-deep cursor-pointer"
               >
                 <img
-                  src={photo.storagePath}
+                  src={photo.url || photo.storagePath}
                   alt={photo.caption || 'Sawirka kooxda'}
                   className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   loading="lazy"
@@ -113,7 +114,7 @@ export function PlayerGalleryTab() {
           <div className="space-y-3">
             <div className="overflow-hidden rounded-xl border border-club-border bg-pitch-deep">
               <img
-                src={activePhoto.storagePath}
+                src={activePhoto.url || activePhoto.storagePath}
                 alt={activePhoto.caption || 'Sawir'}
                 className="w-full max-h-[60vh] object-contain"
               />

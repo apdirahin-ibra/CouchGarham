@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, Lightbulb, RefreshCw } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
@@ -17,7 +17,7 @@ export function PlayerWaanoTab() {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
-  const loadTips = () => {
+  const loadTips = useCallback(() => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -31,11 +31,11 @@ export function PlayerWaanoTab() {
       .finally(() => {
         setIsLoading(false)
       })
-  }
+  }, [token])
 
   useEffect(() => {
     loadTips()
-  }, [token])
+  }, [loadTips])
 
   return (
     <div className="space-y-6 pb-12">

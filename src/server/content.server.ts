@@ -165,9 +165,25 @@ export async function updateClubSettings(input: {
 
 /* ==================== GALLERY (SAWIRO) ==================== */
 
-export async function getGalleryPhotos(): Promise<GalleryPhoto[]> {
+export async function getGalleryPhotos(): Promise<
+  (GalleryPhoto & { url: string })[]
+> {
   const db = getDatabase()
-  return db.select().from(galleryPhotos).orderBy(desc(galleryPhotos.createdAt))
+  const photos = await db
+    .select()
+    .from(galleryPhotos)
+    .orderBy(desc(galleryPhotos.createdAt))
+
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://supabase.co'
+
+  return photos.map((p) => ({
+    ...p,
+    url:
+      p.storagePath.startsWith('http://') ||
+      p.storagePath.startsWith('https://')
+        ? p.storagePath
+        : `${supabaseUrl}/storage/v1/object/public/${p.storageBucket}/${p.storagePath}`,
+  }))
 }
 
 export async function addGalleryPhoto(input: {
@@ -310,6 +326,7 @@ export async function getPlayerDashboardSummary(playerId: string) {
     formattedToday: formatSomaliDate(today),
     announcement: settings.announcementText,
     announcementAudio: settings.announcementAudioPath,
+    announcementAudioPath: settings.announcementAudioPath,
     myTodayStatus: myTodayRecord?.status ?? null,
     myTodayReason: myTodayRecord?.reason ?? null,
     stats: monthStats,

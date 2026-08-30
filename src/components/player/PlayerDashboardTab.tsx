@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertCircle,
   Bell,
@@ -37,7 +37,7 @@ export function PlayerDashboardTab({
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const loadDashboard = () => {
+  const loadDashboard = useCallback(() => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -51,11 +51,11 @@ export function PlayerDashboardTab({
       .finally(() => {
         setIsLoading(false)
       })
-  }
+  }, [token])
 
   useEffect(() => {
     loadDashboard()
-  }, [token])
+  }, [loadDashboard])
 
   const myTodayStatus = dashboard?.myTodayStatus ?? null
   const myTodayReason = dashboard?.myTodayReason ?? null
@@ -70,7 +70,8 @@ export function PlayerDashboardTab({
   const announcement =
     dashboard?.announcement ??
     'Kusoo dhowaada Best Official App. La soco dhammaan ogeysiisyada kooxda.'
-  const announcementAudioPath = dashboard?.announcementAudioPath ?? null
+  const announcementAudioPath =
+    dashboard?.announcementAudioPath ?? dashboard?.announcementAudio ?? null
   const leaveUsedThisMonth = dashboard?.leaveUsedThisMonth ?? 0
   const leaveMaxPerMonth = dashboard?.leaveMaxPerMonth ?? 3
 

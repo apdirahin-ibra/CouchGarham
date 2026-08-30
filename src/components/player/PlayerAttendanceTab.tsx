@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
   CheckCircle,
@@ -45,7 +45,7 @@ export function PlayerAttendanceTab() {
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -61,11 +61,11 @@ export function PlayerAttendanceTab() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     loadHistory()
-  }, [token])
+  }, [loadHistory])
 
   const handleSubmitExcuse = async (e: React.FormEvent) => {
     e.preventDefault()

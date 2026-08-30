@@ -739,3 +739,138 @@ README presents voice announcements, Gallery upload, real-time Chat, and `npm ru
 ## Recheck 4 conclusion
 
 This iteration resolves useful correctness and UI-integrity issues, but the system is still **pre-production**. The next stop-ship sequence is unchanged at its architectural core: implement Better Auth with secure cookies; implement Supabase Storage and voice; fix and harden seeding; make the leave invariant concurrency-safe; then build real database integration and complete Admin/Player E2E suites and enforce them in CI.
+
+---
+
+# Recheck 5 — Independent checker validation — 2026-08-30
+
+## Verdict
+
+**NOT READY FOR PRODUCTION.** The repository now has a clean initial commit, the seed runner is installed with fail-closed validation, leave-limit operations use a shared PostgreSQL advisory lock, CI gained formatting and Drizzle checks, and Gallery/voice UI code was added. Nevertheless, the required Better Auth/HttpOnly-cookie architecture is still absent, the new Storage implementation has a broken authorization and object-lifecycle model, Player voice playback reads the wrong response property, and the test suite still provides no database-backed proof of the required Admin/Player workflows.
+
+## Command and repository evidence
+
+| Check | Result | Independent evidence |
+|---|---:|---|
+| `npm run type-check` | PASS | No TypeScript diagnostics. |
+| `npm run lint` | PASS with warnings | Exit 0; 22 missing-dependency warnings remain. |
+| `npm run format:check` | PASS | All checked files match Prettier. |
+| `npm run test:unit` | PASS | 9 files, 34 tests. |
+| `npm run test:component` | PASS | 3 files, 10 tests. |
+| `npm run db:check` | PASS | Drizzle consistency check passes. |
+| `npm run build` | PASS | Vite/Nitro production build succeeds. |
+| `npm run test:e2e` | PASS, insufficient scope | 3 Chromium tests pass; none use a configured database or complete an authenticated workflow. |
+| `npm run db:seed` | NOT EXECUTED | This command can provision an Admin and insert club data; it was not run against an unidentified database. Its fail-closed no-password branch passes as a unit test. |
+| Git | PASS, minimal history | Working tree was clean at audit start; `main` contains one initial commit (`5914cdc`). |
+
+There is still no populated local environment file, so no live Supabase database, Storage bucket, policy, migration, authenticated workflow, or deployment was exercised.
+
+## Fixes independently confirmed since Recheck 4
+
+- `vite-node` is now installed and locked for the seed script.
+- Seed validation requires `ADMIN_INITIAL_PASSWORD` unless `ALLOW_DEMO_SEED=true`, and validation occurs before database connection.
+- Existing Admin passwords remain preserved unless `FORCE_RESET_ADMIN=true`.
+- Player submission, Admin direct leave, and leave approval now acquire the same transaction-scoped PostgreSQL advisory lock for the player/month key.
+- Gallery file-selection/upload UI and voice recording/upload UI now exist.
+- Player dashboard contains an audio playback control.
+- CI now runs formatting and Drizzle consistency checks.
+- Bottom-nav constants were separated, reducing lint warnings from 25 to 22.
+- The repository was committed and the working tree was clean before this report update.
+- A third Playwright check was added for an Admin wrong-credentials error path.
+
+## Stop-ship findings
+
+### C5-01 — Better Auth and secure cookie sessions remain absent
+
+**Files:** `src/lib/auth.server.ts`, `src/lib/auth-client.tsx:12-103`
+
+No Better Auth instance, Drizzle adapter, handler, or client exists. The raw custom session token is still returned to JavaScript, stored in `localStorage`, and supplied in server-function request data. `SESSION_COOKIE_NAME` remains unused.
+
+This still fails the explicit Better Auth and secure server-side cookie acceptance criteria and exposes the bearer token to injected client code.
+
+### C5-02 — Storage uploads cannot enforce the application's Admin authorization
+
+**File:** `src/lib/storage.ts:8-105`
+
+Gallery and voice objects are uploaded and Gallery objects are deleted directly from the browser using only the public Supabase anon key. The application's custom Admin token is never presented to Supabase and no Supabase Auth session exists. No Storage bucket/policy SQL or policy documentation is checked into the repository.
+
+Therefore Storage cannot distinguish an authenticated app Admin from an anonymous browser. If bucket policies deny anonymous writes, the feature will fail for Admin; if they allow anonymous writes/deletes, anyone with the public anon key can perform those operations. Upload/delete should instead pass through an app-authorized server boundary using the service role, or use narrowly scoped signed operations after validating the app session.
+
+### H5-01 — Gallery upload records the public URL, causing object deletion to be skipped
+
+**Files:** `src/lib/storage.ts:38-61`, `src/components/admin/AdminGalleryTab.tsx:64-113`
+
+`uploadGalleryFile` returns both an object path and public URL. The component saves `publicUrl` into the database's `storagePath`. On delete, it calls Storage deletion only when `storagePath` does **not** start with `http`. Every uploaded Gallery object is saved as an HTTP public URL, so the object deletion branch is never reached. Database metadata is deleted while the Storage file is permanently orphaned.
+
+The database should store bucket plus object path, resolve a URL for display, and delete the object before or atomically with metadata cleanup.
+
+### H5-02 — Voice delete clears metadata but never removes the Storage object
+
+**Files:** `src/lib/storage.ts:80-105`, `src/components/admin/AdminRulesTab.tsx:111-157`
+
+Voice upload stores only the public URL in `announcementAudioPath`. `handleDeleteAudio` clears that database field but never calls a Storage deletion function. Replacements also leave previous recordings behind. This creates permanent orphaned audio objects and makes access revocation impossible.
+
+### H5-03 — Player dashboard uses the wrong audio response property
+
+**Files:** `src/server/content.server.ts:302-319`, `src/components/player/PlayerDashboardTab.tsx:70-74,140-172`
+
+The server returns the voice value as `announcementAudio`, but the Player component reads `dashboard?.announcementAudioPath`. The result is always `null`, so the new Player playback button/audio element never renders even after a successful upload.
+
+### H5-04 — E2E and Storage tests can pass without proving the advertised behavior
+
+`tests/e2e/starter-page.spec.ts` now has three passing tests, but the wrong-password test accepts `Invalid server environment configuration` as success. With no database environment, it does not prove that an existing Admin rejects an incorrect password; any server configuration failure satisfies the assertion.
+
+`tests/unit/storage-and-media.test.ts` only checks two bucket-name constants. It does not test uploads, MIME/size checks, paths, deletion, authorization, voice lifecycle, or response/UI wiring. `tests/integration` still contains only `.gitkeep`.
+
+The required authenticated Admin and Player workflows therefore remain untested.
+
+## Additional findings
+
+### M5-01 — Storage environment validation fails open to placeholders
+
+**File:** `src/lib/storage.ts:8-25`
+
+Unlike the existing environment helpers, this module falls back to `https://placeholder.supabase.co` and `placeholder-anon-key`. Missing deployment configuration is converted into a later network/upload failure instead of a clear configuration error. Use the validated public environment reader and fail before creating the client.
+
+### M5-02 — Gallery UI advertises validation/optimization that is not implemented
+
+**File:** `src/components/admin/AdminGalleryTab.tsx:55-62,213-243`
+
+The UI says PNG/JPG/WEBP with a 5 MB maximum, but code only uses `accept="image/*"`; it performs no file-size/MIME validation and no client-side resize/compression. The file extension and content type are derived from browser-supplied metadata. This does not satisfy the specified optimized-image upload flow.
+
+### M5-03 — Voice recording resource cleanup is incomplete
+
+**File:** `src/components/admin/AdminRulesTab.tsx:69-117`
+
+Microphone tracks are stopped only in `MediaRecorder.onstop`. There is no component-unmount cleanup for an active recorder, stream, timer, or generated object URLs. Navigating away mid-recording can leave the microphone/timer active, and preview URLs are not revoked.
+
+### M5-04 — CI and release proof remain incomplete
+
+CI now includes formatting and Drizzle checking, but still omits seed validation, E2E, database integration, environment/configuration checks, Storage tests, and deployment verification. No preview/production or legacy reconciliation evidence exists.
+
+### M5-05 — Lint warnings remain
+
+ESLint reports 22 missing-effect-dependency warnings across most data-loading tabs, including the new Gallery/Rules code. These may produce stale closures and should be fixed or intentionally documented.
+
+## Recheck 5 release gate
+
+- [x] Type-check, lint command, formatting, unit tests, component tests, Drizzle check, build, and three shallow E2E tests pass.
+- [x] Seed validation fails closed unless explicit demo mode is enabled; its runner is installed.
+- [x] Leave-limit operations share a database advisory lock.
+- [x] Repository has an initial commit and was clean before the audit record update.
+- [x] Gallery and voice capture/upload UI code exists.
+- [ ] Better Auth manages authentication and secure HttpOnly cookie sessions.
+- [ ] Storage writes/deletes are authorized through the app's Admin identity.
+- [ ] Bucket policies are defined, reviewed, and tested.
+- [ ] Gallery stores object paths and deletes the corresponding object.
+- [ ] Voice replacement/deletion removes previous Storage objects.
+- [ ] Player voice playback consumes the actual server response property.
+- [ ] Image size/type/optimization rules are enforced.
+- [ ] Database/API/Storage integration tests pass in an isolated environment.
+- [ ] Required authenticated Admin and Player E2E workflows pass.
+- [ ] CI enforces all release gates and deployment configuration.
+- [ ] Live migrations, persistence, Storage policies, preview deployment, and legacy reconciliation are verified.
+
+## Recheck 5 conclusion
+
+This iteration resolves repository hygiene, seed-runner, leave-concurrency, and visible media-UI gaps, but it introduces an insecure/inoperable Storage authorization boundary and broken media lifecycle. The project remains **pre-production**. The immediate order is: implement Better Auth secure-cookie sessions; move Storage operations behind validated Admin authorization and define policies; store/delete object paths correctly; fix Player voice response wiring and media cleanup; then add real database/Storage integration and complete authenticated workflow E2E coverage in CI.

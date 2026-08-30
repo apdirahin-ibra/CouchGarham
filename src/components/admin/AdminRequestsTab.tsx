@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Check, Clock, Plus, UserCheck, UserPlus, X } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
@@ -63,7 +63,7 @@ export function AdminRequestsTab() {
   const [directReason, setDirectReason] = useState('')
   const [isSavingDirectLeave, setIsSavingDirectLeave] = useState(false)
 
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     if (!token) return
     try {
       const data = await getRequestsInboxAdminFn({
@@ -77,11 +77,11 @@ export function AdminRequestsTab() {
     } catch (err) {
       console.warn('Requests load notice:', err)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     loadRequests()
-  }, [token])
+  }, [loadRequests])
 
   const handleExcuseDecision = async (
     id: string,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
   ArrowDownCircle,
@@ -30,7 +30,7 @@ export function PlayerFinanceTab() {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
-  const loadFinance = () => {
+  const loadFinance = useCallback(() => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -55,11 +55,11 @@ export function PlayerFinanceTab() {
       .finally(() => {
         setIsLoading(false)
       })
-  }
+  }, [token])
 
   useEffect(() => {
     loadFinance()
-  }, [token])
+  }, [loadFinance])
 
   return (
     <div className="space-y-6 pb-12">

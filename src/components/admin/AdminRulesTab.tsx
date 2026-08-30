@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertCircle,
   Bell,
@@ -13,8 +13,12 @@ import {
 } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
-import { uploadVoiceRecording } from '../../lib/storage'
-import { getClubSettingsFn, updateClubSettingsFn } from '../../server/api'
+import {
+  deleteVoiceAnnouncementFn,
+  getClubSettingsFn,
+  updateClubSettingsFn,
+  uploadVoiceAnnouncementFn,
+} from '../../server/api'
 import { Button, SectionTitle, TicketCard } from '../ui'
 import { useToast } from '../ui/toast-context'
 
@@ -40,10 +44,11 @@ export function AdminRulesTab() {
   const [isUploadingAudio, setIsUploadingAudio] = useState(false)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioStreamRef = useRef<MediaStream | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<any>(null)
 
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -61,15 +66,37 @@ export function AdminRulesTab() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     loadSettings()
-  }, [token])
+  }, [loadSettings])
+
+  // Component unmount cleanup (M5-03)
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+      }
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== 'inactive'
+      ) {
+        mediaRecorderRef.current.stop()
+      }
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((track) => track.stop())
+      }
+      if (audioPreviewUrl && audioPreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(audioPreviewUrl)
+      }
+    }
+  }, [audioPreviewUrl])
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      audioStreamRef.current = stream
       const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
@@ -82,11 +109,15 @@ export function AdminRulesTab() {
 
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, {
-          type: 'audio/webm',
+          type: mediaRecorder.mimeType || 'audio/webm',
         })
         setRecordedAudioBlob(audioBlob)
+        if (audioPreviewUrl && audioPreviewUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(audioPreviewUrl)
+        }
         setAudioPreviewUrl(URL.createObjectURL(audioBlob))
         stream.getTracks().forEach((track) => track.stop())
+        audioStreamRef.current = null
       }
 
       mediaRecorder.start()
@@ -116,15 +147,33 @@ export function AdminRulesTab() {
     setIsUploadingAudio(true)
 
     try {
-      const { publicUrl } = await uploadVoiceRecording(recordedAudioBlob)
-      await updateClubSettingsFn({
+      const reader = new FileReader()
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string
+          const base64 = result.split(',')[1] || ''
+          resolve(base64)
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(recordedAudioBlob)
+      })
+
+      const base64Audio = await base64Promise
+      const mimeType = recordedAudioBlob.type || 'audio/webm'
+
+      const { publicUrl } = await uploadVoiceAnnouncementFn({
         data: {
           sessionToken: token,
-          announcementAudioPath: publicUrl,
+          base64Audio,
+          mimeType,
         },
       })
+
       setAnnouncementAudioPath(publicUrl)
       setRecordedAudioBlob(null)
+      if (audioPreviewUrl && audioPreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(audioPreviewUrl)
+      }
       setAudioPreviewUrl(null)
       notify(
         'Codka ogeysiiska si guul leh ayaa loo geliyay Storage!',
@@ -140,14 +189,14 @@ export function AdminRulesTab() {
   const handleDeleteAudio = async () => {
     if (!token) return
     try {
-      await updateClubSettingsFn({
-        data: {
-          sessionToken: token,
-          announcementAudioPath: null,
-        },
+      await deleteVoiceAnnouncementFn({
+        data: { sessionToken: token },
       })
       setAnnouncementAudioPath(null)
       setRecordedAudioBlob(null)
+      if (audioPreviewUrl && audioPreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(audioPreviewUrl)
+      }
       setAudioPreviewUrl(null)
       notify('Codkii ogeysiiska waa la tirtiray', 'neutral')
     } catch (err: any) {
@@ -346,6 +395,12 @@ export function AdminRulesTab() {
                           variant="ghost"
                           onClick={() => {
                             setRecordedAudioBlob(null)
+                            if (
+                              audioPreviewUrl &&
+                              audioPreviewUrl.startsWith('blob:')
+                            ) {
+                              URL.revokeObjectURL(audioPreviewUrl)
+                            }
                             setAudioPreviewUrl(null)
                           }}
                           className="text-xs py-1 px-2"

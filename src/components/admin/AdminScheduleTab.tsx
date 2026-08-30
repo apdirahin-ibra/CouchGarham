@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
   Edit2,
@@ -48,7 +48,7 @@ export function AdminScheduleTab() {
   const [place, setPlace] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  const loadSchedules = async () => {
+  const loadSchedules = useCallback(async () => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -60,29 +60,32 @@ export function AdminScheduleTab() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     loadSchedules()
-  }, [token])
+  }, [loadSchedules])
 
-  const loadDayBreakdown = async (day: string) => {
-    if (!token) return
-    try {
-      const data = await getScheduleAttendanceBreakdownFn({
-        data: { sessionToken: token, dayName: day },
-      })
-      setDayAttendanceBreakdown(data)
-    } catch (err) {
-      console.warn('Day breakdown load notice:', err)
-    }
-  }
+  const loadDayBreakdown = useCallback(
+    async (day: string) => {
+      if (!token) return
+      try {
+        const data = await getScheduleAttendanceBreakdownFn({
+          data: { sessionToken: token, dayName: day },
+        })
+        setDayAttendanceBreakdown(data)
+      } catch (err) {
+        console.warn('Day breakdown load notice:', err)
+      }
+    },
+    [token],
+  )
 
   useEffect(() => {
     if (expandedDay) {
       loadDayBreakdown(expandedDay)
     }
-  }, [expandedDay, token])
+  }, [expandedDay, loadDayBreakdown])
 
   const openAddModal = () => {
     setEditingSchedule(null)

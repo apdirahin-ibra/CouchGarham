@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, Lightbulb, Plus, RefreshCw, Trash2 } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
@@ -23,7 +23,7 @@ export function AdminWaanoTab() {
   const [newTipText, setNewTipText] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  const loadTips = async () => {
+  const loadTips = useCallback(async () => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -35,11 +35,11 @@ export function AdminWaanoTab() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [token])
 
   useEffect(() => {
     loadTips()
-  }, [token])
+  }, [loadTips])
 
   const handleAddTip = async (e: React.FormEvent) => {
     e.preventDefault()

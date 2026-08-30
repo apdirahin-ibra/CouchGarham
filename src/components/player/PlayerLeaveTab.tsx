@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, Calendar, Plus, RefreshCw } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
@@ -39,7 +39,7 @@ export function PlayerLeaveTab() {
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const loadLeaves = () => {
+  const loadLeaves = useCallback(() => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -53,11 +53,11 @@ export function PlayerLeaveTab() {
       .finally(() => {
         setIsLoading(false)
       })
-  }
+  }, [token])
 
   useEffect(() => {
     loadLeaves()
-  }, [token])
+  }, [loadLeaves])
 
   const usedThisMonth = leaves.filter(
     (l) => l.leaveDate.startsWith(currentMonth) && l.status !== 'denied',

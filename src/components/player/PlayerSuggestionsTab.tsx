@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, MessageCircle, Plus, RefreshCw, Send } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
@@ -24,7 +24,7 @@ export function PlayerSuggestionsTab() {
   const [suggestionText, setSuggestionText] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const loadSuggestions = () => {
+  const loadSuggestions = useCallback(() => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
@@ -38,11 +38,11 @@ export function PlayerSuggestionsTab() {
       .finally(() => {
         setIsLoading(false)
       })
-  }
+  }, [token])
 
   useEffect(() => {
     loadSuggestions()
-  }, [token])
+  }, [loadSuggestions])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

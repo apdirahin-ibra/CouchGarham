@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
   CheckCircle,
@@ -40,37 +40,40 @@ export function AdminAttendanceTab() {
   const [loadError, setLoadError] = useState('')
   const [savingPlayerId, setSavingPlayerId] = useState<string | null>(null)
 
-  const loadAttendance = async (date: string) => {
-    if (!token) return
-    setIsLoading(true)
-    setLoadError('')
-    try {
-      const records = await getAttendanceForDateFn({
-        data: { sessionToken: token, date },
-      })
-      if (records) {
-        setRoster(
-          records.map((r: any) => ({
-            playerId: r.playerId,
-            name: r.name,
-            nickname: r.nickname,
-            jerseyNumber: r.jerseyNumber,
-            position: r.position,
-            status: r.status,
-            reason: r.reason || '',
-          })),
-        )
+  const loadAttendance = useCallback(
+    async (date: string) => {
+      if (!token) return
+      setIsLoading(true)
+      setLoadError('')
+      try {
+        const records = await getAttendanceForDateFn({
+          data: { sessionToken: token, date },
+        })
+        if (records) {
+          setRoster(
+            records.map((r: any) => ({
+              playerId: r.playerId,
+              name: r.name,
+              nickname: r.nickname,
+              jerseyNumber: r.jerseyNumber,
+              position: r.position,
+              status: r.status,
+              reason: r.reason || '',
+            })),
+          )
+        }
+      } catch (err: any) {
+        setLoadError(err?.message || 'Qalad ayaa dhacay soo dejinta xaadiriska')
+      } finally {
+        setIsLoading(false)
       }
-    } catch (err: any) {
-      setLoadError(err?.message || 'Qalad ayaa dhacay soo dejinta xaadiriska')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    },
+    [token],
+  )
 
   useEffect(() => {
     loadAttendance(selectedDate)
-  }, [selectedDate, token])
+  }, [selectedDate, loadAttendance])
 
   const handleStatusChange = async (
     playerId: string,

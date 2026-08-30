@@ -21,7 +21,6 @@ import {
 import {
   addGalleryPhoto,
   addTip,
-  deleteGalleryPhoto,
   deleteTip,
   getAdminDashboardSummary,
   getChatMessages,
@@ -70,6 +69,12 @@ import {
   getCurrentMonthRosterStats,
   updatePlayerMonthlyStats,
 } from './stats.server'
+import {
+  deleteGalleryPhotoServer,
+  deleteVoiceAnnouncementServer,
+  uploadGalleryPhotoServer,
+  uploadVoiceAnnouncementServer,
+} from './storage.server'
 
 /* ==================== AUTHENTICATION FUNCTIONS ==================== */
 
@@ -695,6 +700,34 @@ export const getGalleryPhotosFn = createServerFn({ method: 'POST' })
     return getGalleryPhotos()
   })
 
+export const uploadGalleryPhotoFn = createServerFn({ method: 'POST' })
+  .validator(
+    (data: {
+      sessionToken: string
+      base64Data: string
+      mimeType: string
+      caption?: string | null
+    }) =>
+      z
+        .object({
+          sessionToken: z.string().max(256),
+          base64Data: z.string().min(1),
+          mimeType: z.string().min(3),
+          caption: z.string().trim().max(255).optional().nullable(),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    const admin = requireAdmin(actor)
+    return uploadGalleryPhotoServer({
+      base64Data: data.base64Data,
+      mimeType: data.mimeType,
+      caption: data.caption,
+      uploadedBy: admin.name || 'Maamulaha',
+    })
+  })
+
 export const addGalleryPhotoFn = createServerFn({ method: 'POST' })
   .validator(
     (data: {
@@ -732,7 +765,37 @@ export const deleteGalleryPhotoFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const actor = await resolveActorFromToken(data.sessionToken)
     requireAdmin(actor)
-    return deleteGalleryPhoto(data.id)
+    return deleteGalleryPhotoServer(data.id)
+  })
+
+export const uploadVoiceAnnouncementFn = createServerFn({ method: 'POST' })
+  .validator(
+    (data: { sessionToken: string; base64Audio: string; mimeType: string }) =>
+      z
+        .object({
+          sessionToken: z.string().max(256),
+          base64Audio: z.string().min(1),
+          mimeType: z.string().min(3),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return uploadVoiceAnnouncementServer({
+      base64Audio: data.base64Audio,
+      mimeType: data.mimeType,
+    })
+  })
+
+export const deleteVoiceAnnouncementFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string }) =>
+    z.object({ sessionToken: z.string().max(256) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return deleteVoiceAnnouncementServer()
   })
 
 export const getTipsFn = createServerFn({ method: 'POST' })
