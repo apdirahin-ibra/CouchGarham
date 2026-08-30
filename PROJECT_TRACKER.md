@@ -112,7 +112,7 @@ Available ready work should be dispatched in dependency order and up to the live
 |---|---|---|---|---|---|
 | D-01 | Fourth monthly leave request: block or warn? | Open | P5-12 | Observe live behavior; otherwise ask owner. | — |
 | D-02 | Retain `legacy_pin` after migration? | Open | P3-04 / P8-02 | Retain only if needed for migration history; never use for login. | — |
-| D-03 | Private or public Storage buckets? | Open | P7-01 | Private/authenticated access. | — |
+| D-03 | Private or public Storage buckets? | Resolved | P7-01 | Public read for team feed/voice with server-side Admin mutation authorization. | 2026-08-30 |
 | D-04 | Final production Admin credentials | Open | P10-04 | Provision securely at cutover. | — |
 | D-05 | Canonical gallery set | Open | P8-03 | Preserve exported source until owner selects. | — |
 | D-06 | Final crest/logo | Open | P2-03 / P10-04 | Preserve current interim branding. | — |

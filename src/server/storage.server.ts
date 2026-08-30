@@ -308,12 +308,30 @@ export async function uploadVoiceAnnouncementServer(input: {
   }
 
   try {
-    await db
-      .update(clubSettings)
-      .set({
+    const updated = await db
+      .insert(clubSettings)
+      .values({
+        id: 'default',
         announcementAudioPath: objectPath,
+        rulesText:
+          '1. Ilaali waqtiga tababarka iyo kulamada.\n2. Ixtiraam maamulka iyo asxaabta kooxda.\n3. Haysashada direyska iyo agabka kooxda waa muhiim.',
+        announcementText:
+          'Kusoo dhowaada Best Official App. Dhammaan ciyaartooyda waa inay la socdaan jadwalka iyo xaadiriska.',
       })
-      .where(eq(clubSettings.id, 'default'))
+      .onConflictDoUpdate({
+        target: clubSettings.id,
+        set: {
+          announcementAudioPath: objectPath,
+          updatedAt: new Date(),
+        },
+      })
+      .returning()
+
+    if (!updated || updated.length === 0) {
+      throw new Error(
+        'Ku guuldareystay keydinta xogta kooxda (Settings row update failed)',
+      )
+    }
   } catch (dbError: any) {
     // Compensate: Delete newly uploaded audio if DB update failed
     const { error: cleanupError } = await supabase.storage
@@ -352,7 +370,7 @@ export async function uploadVoiceAnnouncementServer(input: {
 }
 
 /**
- * Deletes current voice announcement audio and cleans up Storage object (H6-01 & Recheck 7).
+ * Deletes current voice announcement audio and cleans up Storage object (H6-01 & Recheck 7/8).
  */
 export async function deleteVoiceAnnouncementServer() {
   const db = getDatabase()
@@ -372,9 +390,8 @@ export async function deleteVoiceAnnouncementServer() {
         .from(VOICE_BUCKET)
         .remove([fileName])
       if (removeError) {
-        console.warn(
-          `Storage delete warning for voice file ${fileName}:`,
-          removeError.message,
+        throw new Error(
+          `Ku guuldareystay tirtirista codka Storage: ${removeError.message}`,
         )
       }
     }

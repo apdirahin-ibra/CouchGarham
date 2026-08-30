@@ -1139,3 +1139,151 @@ The tracker still shows early implementation tasks as Ready/Paused, P7-01 blocke
 ## Recheck 7 conclusion and next order
 
 The latest commit restores green configured checks and fixes several Recheck 6 defects, but it does not close the release gate. Fix in this order: (1) replace custom localStorage bearer sessions with Better Auth secure-cookie sessions; (2) store voice object keys and repair/test replacement/deletion; (3) resolve and implement the owner-approved Storage privacy model; (4) add real database/Storage and authenticated workflow tests; (5) make cross-system failures recoverable and policy deployment repeatable; (6) enforce those checks in CI and verify a configured preview deployment.
+
+---
+
+# Recheck 8 — Independent checker validation — 2026-08-30
+
+## Verdict
+
+**NOT READY FOR PRODUCTION.** Commit `acc829a` correctly changes new voice announcements to persist object keys rather than public URLs, resolves those keys into browser URLs on reads, supports cleanup of legacy URL values, and makes the Storage policy declarations repeatable. The release remains blocked by unchanged custom localStorage authentication instead of Better Auth, incomplete voice failure handling, an unapproved hardcoded public-media model, and tests that still do not execute a successful authenticated or live persistence workflow. The revised Admin “login” E2E test no longer submits the form at all.
+
+## Story and boundary status
+
+**Story:** Admin/Player login should create a secure server-managed session; protected server functions should authorize that actor; PostgreSQL and Supabase Storage should persist mutations; and refreshed Admin/Player UI should render the saved result.
+
+| Boundary | Status | Evidence |
+|---|---:|---|
+| Login UI renders | PASS | Three Playwright tests render the page, tabs, join form, and Admin input controls. |
+| UI → authentication | FAIL / untested | The Admin test fills two fields but never clicks submit; no Player login is attempted. |
+| Authentication → secure session | FAIL | Better Auth is unused and the bearer token remains in browser localStorage. |
+| Session → server authorization | PARTIAL | Protected functions resolve the custom token and apply role/ownership helpers, but this is not a Better Auth cookie session. |
+| Server → PostgreSQL/Storage | PARTIAL / unverified live | Static code contains Drizzle and Supabase operations; no configured integration environment exists. |
+| Persistence → refreshed UI | UNVERIFIED | No test performs a successful write, reload, and read-back. |
+
+Per the full-story verification stop rule, secure session creation is the first confirmed broken boundary. Later-layer findings below are static evidence and configured-suite results, not claims of live end-to-end verification.
+
+## Command and repository evidence
+
+| Check | Result | Independent evidence |
+|---|---:|---|
+| `npm run type-check` | PASS | No TypeScript diagnostics. |
+| `npm run lint` | PASS | ESLint reports no findings. |
+| `npm run format:check` | PASS | All checked files match Prettier. |
+| `npm run test:unit` | PASS, limited scope | 10 files and 54 tests pass. The additional test covers only Storage key string extraction. |
+| `npm run test:component` | PASS | 3 files and 10 tests pass. |
+| `npm run db:check` | PASS | Drizzle consistency check passes. |
+| `npm run build` | PASS | Vite client/SSR and Nitro node-server output build successfully. |
+| `npm run test:e2e` | PASS, UI-only | 3 Chromium tests pass in 37.6 seconds; none submits credentials or reaches protected data. |
+| Git | PASS at audit start | Working tree was clean; `main` points to `acc829a`. |
+
+Only `.env.example` is present. Live Supabase database/Storage behavior, migration application, policies, persistence, and Vercel deployment were not executable. The mutating seed command was not run against an unknown external target.
+
+## Fixes independently confirmed since Recheck 7
+
+- New voice uploads persist `objectPath` in `club_settings.announcement_audio_path` instead of the public URL.
+- `getClubSettings()` resolves that stored key into a public browser URL without changing the saved database value.
+- Voice replacement extracts an object key from either a current relative path or a legacy Supabase public URL before attempting old-object removal.
+- Explicit voice deletion now reaches Storage removal for current relative paths and legacy full URLs.
+- Gallery deletion also normalizes a legacy full URL before removal.
+- Storage policies now use `DROP POLICY IF EXISTS` before `CREATE POLICY`, fixing the duplicate-policy failure on reapplication.
+- The old E2E assertion that accepted a configuration error was removed.
+- Static gates, configured tests, build, and repository cleanliness remain green.
+
+## Stop-ship findings
+
+### C8-01 — Better Auth and secure HttpOnly sessions remain entirely unimplemented
+
+**Files:** `src/lib/auth.server.ts:17-371`, `src/lib/auth-client.tsx:14-103`
+
+There is still no source use of `betterAuth`, `drizzleAdapter`, a Better Auth handler, or `createAuthClient`. `SESSION_COOKIE_NAME` remains unused outside its declaration/export. Login returns a raw custom database token, the client writes it to `window.localStorage`, and every protected server function receives it in browser-controlled request data.
+
+This remains the first broken boundary and an explicit specification/acceptance failure. Replace this system with Better Auth-owned authentication/session tables and secure, `HttpOnly`, `SameSite` cookies before treating downstream workflow checks as release proof.
+
+### H8-01 — Voice deletion still clears metadata after Storage reports failure
+
+**File:** `src/server/storage.server.ts:365-388`
+
+The URL/path reachability bug is fixed, but ordinary Supabase deletion failure is only logged with `console.warn`. Execution then clears `announcementAudioPath` and returns `{ success: true }`. The object becomes an untracked public orphan and the Admin receives a false success state.
+
+Inspect the result as a required operation: either preserve metadata and return a visible retryable error, or record a durable cleanup job before clearing it. Add a failure-injection test that returns `{ error }` from `.remove()`.
+
+### H8-02 — Voice upload can still return success without persisting metadata
+
+**File:** `src/server/storage.server.ts:285-317`
+
+The selected settings row is optional, but the subsequent update does not use `returning()` or verify the affected-row count. PostgreSQL treats an update matching zero rows as successful. When the singleton is absent, the function uploads an object, persists nothing, skips compensation, and returns a successful URL/path.
+
+Ensure/upsert the singleton before upload or require exactly one returned row. The missing-row branch must remove the newly uploaded object and report failure.
+
+### H8-03 — The revised Admin E2E test no longer tests login
+
+**File:** `tests/e2e/starter-page.spec.ts:59-81`
+
+The prior configuration-error false positive was removed, but the replacement only verifies that username/password controls accept typed values. `submitBtn` is never clicked. No request, credential decision, session, redirect, protected UI, or logout is asserted. The suite contains no Player login either.
+
+This is weaker authentication coverage despite the commit description claiming tightened E2E. Add configured successful and rejected Admin flows plus successful Player selection, protected navigation, refresh-survival, and logout/session invalidation.
+
+### H8-04 — Public media remains hardcoded despite the open private/public decision
+
+**Files:** `supabase/storage-policies.sql:5-32`, `src/server/storage.server.ts:67-79`, `PROJECT_TRACKER.md:56,115`
+
+The SQL comments call reads “configurable,” but both buckets are unconditionally set `public = true` and anonymous SELECT policies are always created. The application always constructs `/object/public/` URLs and has no signed/private read path. The tracker still marks P7-01 blocked and private/authenticated access as the safe default.
+
+The documentation change does not resolve owner approval or make the implementation configurable. Obtain the decision, record it, then implement and test exactly one approved model before deployment.
+
+### H8-05 — Integration and persistence behavior remain untested
+
+**Files:** `tests/integration/storage-and-api-integration.test.ts:1-103`, `tests/unit/storage-and-media.test.ts:10-45`, `vitest.unit.config.ts:8`
+
+The integration-named suite continues to test signatures, URL formatting, and constants only. The new unit assertion tests `extractStorageKeyFromPath` string output. Neither suite invokes upload/delete services with mocked failures, server functions, authorization, a database, Supabase Storage, or policies. Consequently they cannot catch H8-01 or H8-02.
+
+Add isolated database/Storage lifecycle tests, including upload success/failure, zero-row update, compensation failure, replacement cleanup failure, explicit deletion failure, authorization denial, and reload/read-back.
+
+## Additional findings
+
+### M8-01 — Replacement cleanup failure has no durable retry
+
+**File:** `src/server/storage.server.ts:334-348`
+
+After the new voice path is safely persisted, failure to remove the old public object is only logged. Keeping the new recording available is correct, but the leaked old object needs a durable cleanup queue/retry or an observable manual-recovery record; a transient server log is not recoverable behavior.
+
+### M8-02 — The general settings endpoint can violate the object-path invariant
+
+**Files:** `src/server/api.ts:857-877`, `src/server/content.server.ts:142-169`
+
+`updateClubSettingsFn` still accepts arbitrary `announcementAudioPath` text from the client even though dedicated upload/delete functions now own this field. An Admin request can save an external URL, malformed key, or another bucket key and bypass the corrected lifecycle invariant. Remove this field from the general settings mutation or strictly normalize and validate owned Storage keys server-side.
+
+### M8-03 — Gallery delete retains a cross-system failure gap
+
+**File:** `src/server/storage.server.ts:232-259`
+
+Storage removal happens before the database row deletion. If the later database delete fails, the row remains but references a missing object. Use an explicit pending-delete/outbox/cleanup strategy and failure-injection tests so either direction is recoverable.
+
+### M8-04 — MIME/signature matching and image optimization remain incomplete
+
+The server verifies that a declaration is in an allow-list and independently recognizes any signature in that media family, but it does not require the detected type to match the declared MIME. The specified client-side resize/compression flow is also still absent.
+
+### M8-05 — CI and project status remain incomplete
+
+CI still omits Playwright, real database/Storage integration, migration application, policy enforcement, and deployment smoke tests. The project tracker still lists early tasks as Ready/Paused, keeps P7-01 blocked, and leaves every final acceptance checkbox open. It must be reconciled before it can serve as the completion ledger.
+
+## Recheck 8 release gate
+
+- [x] Type-check, lint, formatting, helper/unit tests, component tests, Drizzle check, build, and three UI-only Playwright tests pass.
+- [x] New voice values are stored as object keys and resolved to browser URLs on read.
+- [x] Current and legacy URL/path values reach replacement/deletion cleanup attempts.
+- [x] Storage policy declarations are syntactically repeatable by policy name.
+- [ ] Better Auth owns authentication and secure `HttpOnly` cookie sessions.
+- [ ] Voice deletion reports/retries Storage failures instead of clearing metadata and returning success.
+- [ ] Voice upload requires a persisted settings row and compensates zero-row updates.
+- [ ] Storage/database transitions have a tested recoverable consistency strategy.
+- [ ] The owner-approved Storage privacy model is implemented end to end.
+- [ ] Real database/API/Storage integration tests pass in an isolated environment.
+- [ ] Successful Admin and Player authenticated/persisted E2E workflows pass.
+- [ ] CI enforces integration, E2E, migration, policy, and deployment gates.
+- [ ] Live persistence, preview deployment, legacy reconciliation, tracker reconciliation, and owner acceptance are verified.
+
+## Recheck 8 conclusion and next order
+
+This commit closes the original URL/path reachability defect and makes policy reapplication safer, but the project remains pre-production. The correct order is now: (1) implement Better Auth secure-cookie sessions; (2) make voice upload/delete failure semantics truthful and recoverable; (3) resolve the Storage privacy decision and implement public or private reads consistently; (4) replace helper-only “integration” evidence with isolated database/Storage lifecycle tests; (5) add successful authenticated persistence E2E; and (6) enforce those gates in CI and a configured preview deployment.

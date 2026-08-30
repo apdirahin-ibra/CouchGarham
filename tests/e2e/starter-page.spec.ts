@@ -78,5 +78,8 @@ test.describe('Best Official App - Authentication & Navigation Flows', () => {
 
     await passwordInput.fill('SecretPassword123')
     await expect(passwordInput).toHaveValue('SecretPassword123')
+
+    await submitBtn.click()
+    await expect(page.locator('body')).toBeVisible()
   })
 })
