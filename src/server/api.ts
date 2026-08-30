@@ -711,8 +711,11 @@ export const uploadGalleryPhotoFn = createServerFn({ method: 'POST' })
       z
         .object({
           sessionToken: z.string().max(256),
-          base64Data: z.string().min(1),
-          mimeType: z.string().min(3),
+          base64Data: z
+            .string()
+            .min(1)
+            .max(7 * 1024 * 1024),
+          mimeType: z.string().min(3).max(100),
           caption: z.string().trim().max(255).optional().nullable(),
         })
         .parse(data),
@@ -774,8 +777,11 @@ export const uploadVoiceAnnouncementFn = createServerFn({ method: 'POST' })
       z
         .object({
           sessionToken: z.string().max(256),
-          base64Audio: z.string().min(1),
-          mimeType: z.string().min(3),
+          base64Audio: z
+            .string()
+            .min(1)
+            .max(14 * 1024 * 1024),
+          mimeType: z.string().min(3).max(100),
         })
         .parse(data),
   )

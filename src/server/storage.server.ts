@@ -55,7 +55,77 @@ export function resolveStorageUrl(
 }
 
 /**
- * Uploads gallery photo via Admin Service Role with format & size validation (C5-02 & H5-01).
+ * Validates magic bytes signature of binary buffer (M6-02).
+ */
+export function validateImageSignature(buffer: Buffer): boolean {
+  if (buffer.length < 4) return false
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff)
+    return true
+  // PNG: 89 50 4E 47
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  )
+    return true
+  // GIF: GIF87a or GIF89a
+  if (
+    buffer[0] === 0x47 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x38
+  )
+    return true
+  // WEBP: RIFF....WEBP
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+  )
+    return true
+
+  return false
+}
+
+/**
+ * Validates audio format magic bytes signature (M6-02).
+ */
+export function validateAudioSignature(buffer: Buffer): boolean {
+  if (buffer.length < 4) return false
+  // WebM / EBML: 1A 45 DF A3
+  if (
+    buffer[0] === 0x1a &&
+    buffer[1] === 0x45 &&
+    buffer[2] === 0xdf &&
+    buffer[3] === 0xa3
+  )
+    return true
+  // MP4 / M4A: ftyp at offset 4
+  if (buffer.length >= 8 && buffer.subarray(4, 8).toString('ascii') === 'ftyp')
+    return true
+  // MP3: ID3 or frame sync FF FB / FF F3 / FF F2
+  if (
+    buffer.subarray(0, 3).toString('ascii') === 'ID3' ||
+    (buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0)
+  )
+    return true
+  // WAV: RIFF....WAVE
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+    buffer.subarray(8, 12).toString('ascii') === 'WAVE'
+  )
+    return true
+  // OGG: OggS
+  if (buffer.subarray(0, 4).toString('ascii') === 'OggS') return true
+
+  return false
+}
+
+/**
+ * Uploads gallery photo via Admin Service Role with failure compensation (H6-01 & H6-02).
  */
 export async function uploadGalleryPhotoServer(input: {
   base64Data: string
@@ -75,11 +145,17 @@ export async function uploadGalleryPhotoServer(input: {
     throw new Error('Cabbirka sawirku waa inuu ka yaryahay 5 MB.')
   }
 
+  if (!validateImageSignature(buffer)) {
+    throw new Error(
+      'Feylka la geliyay ma aha sawir sax ah (Invalid image signature).',
+    )
+  }
+
   const ext = cleanMime.split('/')[1] || 'jpg'
   const objectPath = `${Date.now()}-${crypto.randomUUID()}.${ext}`
 
   const supabase = getSupabaseAdminClient()
-  const { error } = await supabase.storage
+  const { error: uploadError } = await supabase.storage
     .from(GALLERY_BUCKET)
     .upload(objectPath, buffer, {
       contentType: cleanMime,
@@ -87,29 +163,46 @@ export async function uploadGalleryPhotoServer(input: {
       upsert: false,
     })
 
-  if (error) {
-    throw new Error(`Ku guuldareystay shubista sawirka: ${error.message}`)
+  if (uploadError) {
+    throw new Error(`Ku guuldareystay shubista sawirka: ${uploadError.message}`)
   }
 
-  const db = getDatabase()
-  const [inserted] = await db
-    .insert(galleryPhotos)
-    .values({
-      storageBucket: GALLERY_BUCKET,
-      storagePath: objectPath,
-      caption: input.caption?.trim() || null,
-      uploadedBy: input.uploadedBy,
-    })
-    .returning()
+  try {
+    const db = getDatabase()
+    const [inserted] = await db
+      .insert(galleryPhotos)
+      .values({
+        storageBucket: GALLERY_BUCKET,
+        storagePath: objectPath,
+        caption: input.caption?.trim() || null,
+        uploadedBy: input.uploadedBy,
+      })
+      .returning()
 
-  return {
-    ...inserted,
-    url: resolveStorageUrl(GALLERY_BUCKET, inserted.storagePath),
+    return {
+      ...inserted,
+      url: resolveStorageUrl(GALLERY_BUCKET, inserted.storagePath),
+    }
+  } catch (dbError: any) {
+    // Compensate: Clean up orphaned storage object if DB insert failed
+    const { error: cleanupError } = await supabase.storage
+      .from(GALLERY_BUCKET)
+      .remove([objectPath])
+    if (cleanupError) {
+      console.error(
+        `Failed to compensate storage cleanup for ${objectPath}:`,
+        cleanupError.message,
+      )
+    }
+    throw new Error(
+      `Ku guuldareystay keydinta xogta sawirka: ${dbError?.message || 'Database error'}`,
+      { cause: dbError },
+    )
   }
 }
 
 /**
- * Deletes gallery photo from PostgreSQL and Supabase Storage bucket atomically (H5-01).
+ * Deletes gallery photo from PostgreSQL and Supabase Storage bucket with error handling (H6-01).
  */
 export async function deleteGalleryPhotoServer(photoId: string) {
   const db = getDatabase()
@@ -123,18 +216,20 @@ export async function deleteGalleryPhotoServer(photoId: string) {
     throw new Error('Sawirkan lama helin')
   }
 
-  // Delete from Storage if it's an object key (not external URL)
+  // Delete from Storage if it's an object key
   if (
     !photo.storagePath.startsWith('http://') &&
     !photo.storagePath.startsWith('https://')
   ) {
-    try {
-      const supabase = getSupabaseAdminClient()
-      await supabase.storage
-        .from(photo.storageBucket)
-        .remove([photo.storagePath])
-    } catch (err) {
-      console.warn(`Could not delete storage object ${photo.storagePath}:`, err)
+    const supabase = getSupabaseAdminClient()
+    const { error: removeError } = await supabase.storage
+      .from(photo.storageBucket)
+      .remove([photo.storagePath])
+
+    if (removeError) {
+      throw new Error(
+        `Ku guuldareystay tirtirista sawirka Storage: ${removeError.message}`,
+      )
     }
   }
 
@@ -143,7 +238,7 @@ export async function deleteGalleryPhotoServer(photoId: string) {
 }
 
 /**
- * Uploads voice announcement audio via Admin Service Role, replacing previous recording (H5-02).
+ * Uploads voice announcement audio, safely persisting new object before deleting old (H6-02).
  */
 export async function uploadVoiceAnnouncementServer(input: {
   base64Audio: string
@@ -159,6 +254,12 @@ export async function uploadVoiceAnnouncementServer(input: {
     throw new Error('Cabbirka codku waa inuu ka yaryahay 10 MB.')
   }
 
+  if (!validateAudioSignature(buffer)) {
+    throw new Error(
+      'Feylka la geliyay ma aha cod sax ah (Invalid audio signature).',
+    )
+  }
+
   const db = getDatabase()
   const [existingSettings] = await db
     .select()
@@ -166,25 +267,13 @@ export async function uploadVoiceAnnouncementServer(input: {
     .where(eq(clubSettings.id, 'default'))
     .limit(1)
 
-  // Remove old audio object from Storage if one existed
-  if (existingSettings?.announcementAudioPath) {
-    const oldPath = existingSettings.announcementAudioPath
-    const fileName = oldPath.includes('/') ? oldPath.split('/').pop() : oldPath
-    if (fileName) {
-      try {
-        const supabase = getSupabaseAdminClient()
-        await supabase.storage.from(VOICE_BUCKET).remove([fileName])
-      } catch (err) {
-        console.warn(`Could not remove old voice object:`, err)
-      }
-    }
-  }
+  const oldAudioPath = existingSettings?.announcementAudioPath
 
   const ext = cleanMime.split('/')[1]?.split(';')[0] || 'webm'
   const objectPath = `announcement-${Date.now()}-${crypto.randomUUID()}.${ext}`
 
   const supabase = getSupabaseAdminClient()
-  const { error } = await supabase.storage
+  const { error: uploadError } = await supabase.storage
     .from(VOICE_BUCKET)
     .upload(objectPath, buffer, {
       contentType: cleanMime,
@@ -192,24 +281,63 @@ export async function uploadVoiceAnnouncementServer(input: {
       upsert: true,
     })
 
-  if (error) {
-    throw new Error(`Ku guuldareystay shubista codka: ${error.message}`)
+  if (uploadError) {
+    throw new Error(`Ku guuldareystay shubista codka: ${uploadError.message}`)
   }
 
   const publicUrl = resolveStorageUrl(VOICE_BUCKET, objectPath)
 
-  await db
-    .update(clubSettings)
-    .set({
-      announcementAudioPath: publicUrl,
-    })
-    .where(eq(clubSettings.id, 'default'))
+  try {
+    await db
+      .update(clubSettings)
+      .set({
+        announcementAudioPath: publicUrl,
+      })
+      .where(eq(clubSettings.id, 'default'))
+  } catch (dbError: any) {
+    // Compensate: Delete newly uploaded audio if DB update failed
+    const { error: cleanupError } = await supabase.storage
+      .from(VOICE_BUCKET)
+      .remove([objectPath])
+    if (cleanupError) {
+      console.error(
+        `Failed to compensate voice cleanup for ${objectPath}:`,
+        cleanupError.message,
+      )
+    }
+    throw new Error(
+      `Ku guuldareystay keydinta codka database-ka: ${dbError?.message || 'DB error'}`,
+      { cause: dbError },
+    )
+  }
+
+  // Best-effort cleanup of old audio object AFTER new audio is safely persisted (H6-02)
+  if (
+    oldAudioPath &&
+    !oldAudioPath.startsWith('http://') &&
+    !oldAudioPath.startsWith('https://')
+  ) {
+    const fileName = oldAudioPath.includes('/')
+      ? oldAudioPath.split('/').pop()
+      : oldAudioPath
+    if (fileName) {
+      const { error: oldRemoveError } = await supabase.storage
+        .from(VOICE_BUCKET)
+        .remove([fileName])
+      if (oldRemoveError) {
+        console.warn(
+          `Could not remove old voice object ${fileName}:`,
+          oldRemoveError.message,
+        )
+      }
+    }
+  }
 
   return { publicUrl, storagePath: objectPath }
 }
 
 /**
- * Deletes current voice announcement audio and cleans up Storage object (H5-02).
+ * Deletes current voice announcement audio and cleans up Storage object (H6-01).
  */
 export async function deleteVoiceAnnouncementServer() {
   const db = getDatabase()
@@ -222,12 +350,20 @@ export async function deleteVoiceAnnouncementServer() {
   if (existingSettings?.announcementAudioPath) {
     const oldPath = existingSettings.announcementAudioPath
     const fileName = oldPath.includes('/') ? oldPath.split('/').pop() : oldPath
-    if (fileName) {
-      try {
-        const supabase = getSupabaseAdminClient()
-        await supabase.storage.from(VOICE_BUCKET).remove([fileName])
-      } catch (err) {
-        console.warn(`Could not delete voice file from bucket:`, err)
+    if (
+      fileName &&
+      !oldPath.startsWith('http://') &&
+      !oldPath.startsWith('https://')
+    ) {
+      const supabase = getSupabaseAdminClient()
+      const { error: removeError } = await supabase.storage
+        .from(VOICE_BUCKET)
+        .remove([fileName])
+      if (removeError) {
+        console.warn(
+          `Storage delete warning for voice file ${fileName}:`,
+          removeError.message,
+        )
       }
     }
   }

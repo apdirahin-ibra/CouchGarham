@@ -5,7 +5,7 @@ export default defineConfig({
     environment: 'node',
     clearMocks: true,
     fileParallelism: false,
-    include: ['tests/unit/**/*.test.ts'],
+    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
     isolate: true,
     maxWorkers: 1,
     passWithNoTests: false,

@@ -39,20 +39,18 @@ export function PlayerLeaveTab() {
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const loadLeaves = useCallback(() => {
+  const loadLeaves = useCallback(async () => {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
-    getPlayerLeavesFn({ data: { sessionToken: token } })
-      .then((data) => {
-        setLeaves(data || [])
-      })
-      .catch((err: any) => {
-        setLoadError(err?.message || 'Qalad ayaa dhacay soo dejinta fasaxa')
-      })
-      .finally(() => {
-        setIsLoading(false)
-      })
+    try {
+      const data = await getPlayerLeavesFn({ data: { sessionToken: token } })
+      setLeaves(data || [])
+    } catch (err: any) {
+      setLoadError(err?.message || 'Qalad ayaa dhacay soo dejinta fasaxa')
+    } finally {
+      setIsLoading(false)
+    }
   }, [token])
 
   useEffect(() => {

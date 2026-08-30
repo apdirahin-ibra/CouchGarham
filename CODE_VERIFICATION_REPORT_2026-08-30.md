@@ -874,3 +874,130 @@ ESLint reports 22 missing-effect-dependency warnings across most data-loading ta
 ## Recheck 5 conclusion
 
 This iteration resolves repository hygiene, seed-runner, leave-concurrency, and visible media-UI gaps, but it introduces an insecure/inoperable Storage authorization boundary and broken media lifecycle. The project remains **pre-production**. The immediate order is: implement Better Auth secure-cookie sessions; move Storage operations behind validated Admin authorization and define policies; store/delete object paths correctly; fix Player voice response wiring and media cleanup; then add real database/Storage integration and complete authenticated workflow E2E coverage in CI.
+
+---
+
+# Recheck 6 — Independent checker validation — 2026-08-30
+
+## Verdict
+
+**NOT READY FOR PRODUCTION.** Storage mutations now pass through an Admin-authorized server boundary, object paths are stored for Gallery uploads, Player audio wiring is corrected, media input validation/cleanup improved, and the leave advisory-lock fix remains present. The release is still blocked by the unchanged custom localStorage authentication instead of Better Auth cookies, unsafe cross-system Storage/database failure ordering, absent bucket policy/provisioning evidence, no real integration/authenticated workflow tests, and a newly failing lint gate.
+
+## Command and repository evidence
+
+| Check | Result | Independent evidence |
+|---|---:|---|
+| `npm run type-check` | PASS | No TypeScript diagnostics. |
+| `npm run lint` | FAIL | 1 React Compiler `preserve-manual-memoization` error in `PlayerLeaveTab.tsx:42-56`. |
+| `npm run format:check` | PASS | All checked files match Prettier. |
+| `npm run test:unit` | PASS | 9 files, 38 tests. |
+| `npm run test:component` | PASS | 3 files, 10 tests. |
+| `npm run db:check` | PASS | Drizzle consistency check passes. |
+| `npm run build` | PASS | Vite/Nitro production build succeeds. |
+| `npm run test:e2e` | PASS, insufficient scope | 3 Chromium login-page tests pass; none completes a configured authenticated/database workflow. |
+| Git | PASS | Working tree was clean at audit start; `main` contains two commits, latest `0c7d359`. |
+
+No populated runtime environment is present. Live Supabase database/Storage behavior, bucket configuration, policy enforcement, migrations, and deployed workflows remain unexecuted.
+
+## Fixes independently confirmed since Recheck 5
+
+- Browser code no longer calls Supabase Storage directly; media uploads/deletes call authenticated server functions.
+- Each media server function resolves the custom app session and requires Admin before using the service-role client.
+- Gallery uploads now store an object key rather than the public URL.
+- Gallery retrieval resolves stored paths into display URLs.
+- Gallery image type and 5 MB size checks exist on both client and server.
+- Voice type and 10 MB size checks exist on the server.
+- Voice upload/delete server functions and UI wiring exist.
+- Player dashboard now accepts the actual `announcementAudio` response, and the server also returns a compatibility `announcementAudioPath` field.
+- Active microphone streams, timers, and preview object URLs receive substantially better cleanup.
+- Leave submission/direct creation/approval continue to use the common player-month advisory lock.
+- A second corrective commit exists and the working tree was clean before this report update.
+
+## Stop-ship findings
+
+### C6-01 — Better Auth and HttpOnly cookie sessions remain unimplemented
+
+**Files:** `src/lib/auth.server.ts`, `src/lib/auth-client.tsx:12-103`
+
+The Better Auth dependency is still unused. There is no Better Auth instance, Drizzle adapter, handler, or client. The raw custom session token remains in browser `localStorage` and in browser-controlled server-function payloads; the declared cookie name remains unused.
+
+This continues to fail an explicit core acceptance criterion and leaves the bearer token accessible to injected browser scripts.
+
+### H6-01 — Storage deletion errors are ignored and metadata is removed anyway
+
+**File:** `src/server/storage.server.ts:92-123,174-198`
+
+Supabase Storage `.remove()` returns an `{ error }` result; it does not normally throw. Both Gallery and voice deletion await `.remove()` without inspecting `error`, so their `catch` blocks do not handle ordinary API failures. Gallery then deletes its PostgreSQL row, and voice clears its database path, leaving unreachable/orphaned objects while reporting success.
+
+Required correction: inspect every Storage result, fail or record a recoverable cleanup job on error, and only commit the metadata transition according to a documented consistency strategy.
+
+### H6-02 — Voice replacement can destroy the current recording before replacement succeeds
+
+**File:** `src/server/storage.server.ts:125-172`
+
+The function removes the old object first, then uploads the new object, then updates PostgreSQL. If upload fails, the database still points to a deleted old object. If the database update fails, the old object is gone and the newly uploaded object is orphaned.
+
+Upload the new object first, update metadata, then best-effort delete the old object with durable cleanup/retry. The same compensating cleanup is needed when Gallery upload succeeds but its database insert fails.
+
+### H6-03 — Storage buckets, read policy, and deployment provisioning are undefined
+
+No bucket/policy SQL, provisioning script, or verified deployment documentation exists for `club-gallery` or `club-voice`. URLs are always generated through `/object/public/`, so the implementation implicitly requires public buckets. The specification left public versus authenticated media as an owner decision, but the code has silently selected public access without documenting or verifying that decision.
+
+Required correction: obtain/record the owner decision, provision the buckets reproducibly, define read/write/delete policies, and add a deployed policy test. If media is private, use authenticated/signed reads instead of public URLs.
+
+### H6-04 — Passing E2E assertions still do not prove authentication
+
+**File:** `tests/e2e/starter-page.spec.ts:59-80`
+
+The Admin error test still accepts `Invalid server environment configuration`, generic `Qalad`, or generic `Error`. With no configured database, it passes on configuration failure without locating an Admin or comparing the submitted password. The suite still contains no successful Admin login, Player login, persistence, authorization, CRUD, approval, media, Chat, or logout flow.
+
+`tests/integration` remains empty. The expanded Storage unit test constructs mock objects and arithmetic locally; it does not call `storage.server.ts`, mock Supabase responses, or verify database/object consistency.
+
+### H6-05 — Lint release gate regressed to failure
+
+**File:** `src/components/player/PlayerLeaveTab.tsx:42-56`
+
+React Compiler reports that the `useCallback` dependency list cannot preserve inferred memoization. Since CI runs `npm run lint`, the checked-in commit currently fails its own CI workflow despite its commit message claiming all hook warnings were resolved.
+
+## Additional findings
+
+### M6-01 — Base64 media transport is inefficient and weakly bounded at the API boundary
+
+**File:** `src/server/api.ts:703-728,771-789`
+
+Binary media is expanded into base64 inside JSON and accepted by validators with only `min(1)`. The decoded buffer is checked later, but an oversized request must already be parsed and held in memory. This is risky for serverless request/body limits and memory. Prefer multipart/signed upload flows or at least enforce encoded-length limits before decoding.
+
+### M6-02 — Server trusts declared MIME type rather than file content
+
+**File:** `src/server/storage.server.ts:51-85,125-160`
+
+Allow-list checks use the client-supplied MIME string, but no magic-byte/content inspection confirms the payload is actually an allowed image/audio format. Because objects are served publicly, validate file signatures or process images/audio through a trusted decoder before publishing.
+
+### M6-03 — Image optimization is still absent
+
+The 5 MB/type limit is now enforced, but there is no resize/compression step before upload. The rebuild specification calls for preserving the optimized-image flow. Large camera images within the limit are uploaded unchanged.
+
+### M6-04 — CI remains incomplete
+
+CI now covers formatting, type-check, lint, Drizzle, unit, component, and build. It still omits seed safety, E2E, database/Storage integration, bucket/policy verification, environment validation, and deployment checks. With lint currently failing, even the existing CI job is red.
+
+## Recheck 6 release gate
+
+- [x] Type-check, formatting, unit tests, component tests, Drizzle check, build, and three shallow Playwright tests pass.
+- [x] Storage mutations require the app's Admin authorization before use of the service role.
+- [x] Gallery stores object paths; Player voice response wiring and browser media cleanup are improved.
+- [x] Leave-cap advisory locking remains implemented.
+- [x] Repository has two commits and was clean before audit recording.
+- [ ] Better Auth manages authentication and secure HttpOnly cookie sessions.
+- [ ] Lint and the checked-in CI workflow pass.
+- [ ] Storage/database mutations follow a tested failure-consistency and cleanup strategy.
+- [ ] Bucket access decision, provisioning, and policies are documented and verified.
+- [ ] Media content signatures and image optimization are enforced.
+- [ ] Database/API/Storage integration tests run against an isolated environment.
+- [ ] Required authenticated Admin and Player E2E workflows pass.
+- [ ] CI enforces the complete release gate.
+- [ ] Live migrations, persistence, Storage policies, preview deployment, and legacy reconciliation are verified.
+
+## Recheck 6 conclusion
+
+This pass fixes the direct anonymous Storage-write design and several media wiring issues, but the project remains **pre-production**. The immediate order is: implement Better Auth secure-cookie sessions; fix lint; make Storage/database updates failure-safe and define bucket policies; then add real database/Storage integration and authenticated workflow E2E coverage and enforce it in CI.
