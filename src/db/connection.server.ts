@@ -14,7 +14,7 @@ const DATABASE_CONNECTION_KEY = Symbol.for('couch-garham.database-connection')
  */
 const databaseClientOptions = {
   prepare: false,
-  max: 1,
+  max: 5,
   idle_timeout: 20,
   connect_timeout: 10,
   max_lifetime: 60 * 30,

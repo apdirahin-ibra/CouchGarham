@@ -40,7 +40,7 @@ function IndexPage() {
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0)
 
   useEffect(() => {
-    if (user?.role === 'admin' && token) {
+    if (user?.role === 'admin' && token && adminTab !== 'dashboard') {
       getAdminDashboardFn({ data: { sessionToken: token } })
         .then((data) => {
           if (data?.pendingRequests?.total !== undefined) {
@@ -78,7 +78,10 @@ function IndexPage() {
         {user.role === 'admin' ? (
           <>
             {adminTab === 'dashboard' && (
-              <AdminDashboardTab onNavigateToTab={setAdminTab} />
+              <AdminDashboardTab
+                onNavigateToTab={setAdminTab}
+                onPendingRequestsCountChange={setPendingRequestsCount}
+              />
             )}
             {adminTab === 'players' && <AdminPlayersTab />}
             {adminTab === 'attendance' && <AdminAttendanceTab />}

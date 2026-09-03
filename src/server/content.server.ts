@@ -241,31 +241,31 @@ export async function getAdminDashboardSummary() {
   const today = getTodayDateString()
   const currentMonth = getCurrentMonthKey()
 
-  const todayAttendance = await getAttendanceForDate(today)
+  const [todayAttendance, recentLogins, monthStats, requestsInbox] =
+    await Promise.all([
+      getAttendanceForDate(today),
+      db
+        .select()
+        .from(loginLogs)
+        .orderBy(desc(loginLogs.loggedInAt))
+        .limit(10),
+      db
+        .select({
+          totalGoals: sql<number>`COALESCE(sum(goals), 0)::int`,
+          totalAssists: sql<number>`COALESCE(sum(assists), 0)::int`,
+          totalErrors: sql<number>`COALESCE(sum(errors), 0)::int`,
+        })
+        .from(playerMonthlyStats)
+        .where(eq(playerMonthlyStats.monthKey, currentMonth)),
+      getRequestsInboxAdmin(),
+    ])
+
   const xadirList = todayAttendance.filter((p) => p.status === 'xadir')
   const maqanList = todayAttendance.filter((p) => p.status === 'maqan')
   const daahayList = todayAttendance.filter((p) => p.status === 'daahay')
   const unrecordedList = todayAttendance.filter((p) => !p.status)
 
-  // Recent login logs
-  const recentLogins = await db
-    .select()
-    .from(loginLogs)
-    .orderBy(desc(loginLogs.loggedInAt))
-    .limit(10)
-
-  // Aggregate monthly goals/assists/errors
-  const monthStats = await db
-    .select({
-      totalGoals: sql<number>`COALESCE(sum(goals), 0)::int`,
-      totalAssists: sql<number>`COALESCE(sum(assists), 0)::int`,
-      totalErrors: sql<number>`COALESCE(sum(errors), 0)::int`,
-    })
-    .from(playerMonthlyStats)
-    .where(eq(playerMonthlyStats.monthKey, currentMonth))
-
   // Pending requests count
-  const requestsInbox = await getRequestsInboxAdmin()
   const pendingExcuses = requestsInbox.excuses.filter(
     (e) => e.status === 'pending',
   ).length
@@ -313,10 +313,12 @@ export async function getPlayerDashboardSummary(playerId: string) {
   const currentMonth = getCurrentMonthKey()
   const { startDate, nextMonthStartDate } = getMonthDateRange(currentMonth)
 
-  const settings = await getClubSettings()
-  const monthStats = await getPlayerMonthlyStats(playerId)
-  const leaves = await getPlayerLeaves(playerId)
-  const todayAttendance = await getAttendanceForDate(today)
+  const [settings, monthStats, leaves, todayAttendance] = await Promise.all([
+    getClubSettings(),
+    getPlayerMonthlyStats(playerId),
+    getPlayerLeaves(playerId),
+    getAttendanceForDate(today),
+  ])
 
   const usedThisMonth = leaves.filter(
     (l) =>

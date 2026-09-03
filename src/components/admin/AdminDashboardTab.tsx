@@ -24,8 +24,10 @@ type AttendanceListType = 'xadir' | 'maqan' | 'daahay' | 'unrecorded' | null
 
 export function AdminDashboardTab({
   onNavigateToTab,
+  onPendingRequestsCountChange,
 }: {
   onNavigateToTab: (tab: any) => void
+  onPendingRequestsCountChange?: (count: number) => void
 }) {
   const { token } = useAuth()
   const today = getTodayDateString()
@@ -45,6 +47,9 @@ export function AdminDashboardTab({
     getAdminDashboardFn({ data: { sessionToken: token } })
       .then((data) => {
         setDashboardData(data)
+        if (data?.pendingRequests?.total !== undefined) {
+          onPendingRequestsCountChange?.(data.pendingRequests.total)
+        }
       })
       .catch((err: any) => {
         setLoadError(
@@ -54,7 +59,7 @@ export function AdminDashboardTab({
       .finally(() => {
         setIsLoading(false)
       })
-  }, [token])
+  }, [token, onPendingRequestsCountChange])
 
   useEffect(() => {
     loadDashboard()
