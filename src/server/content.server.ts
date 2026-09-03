@@ -244,11 +244,7 @@ export async function getAdminDashboardSummary() {
   const [todayAttendance, recentLogins, monthStats, requestsInbox] =
     await Promise.all([
       getAttendanceForDate(today),
-      db
-        .select()
-        .from(loginLogs)
-        .orderBy(desc(loginLogs.loggedInAt))
-        .limit(10),
+      db.select().from(loginLogs).orderBy(desc(loginLogs.loggedInAt)).limit(10),
       db
         .select({
           totalGoals: sql<number>`COALESCE(sum(goals), 0)::int`,

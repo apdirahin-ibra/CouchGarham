@@ -21,37 +21,61 @@ import {
 import { getPlayerDashboardSummaryFn } from '../../server/api'
 import { Button, SectionTitle, StatTile, StatusBadge, TicketCard } from '../ui'
 
+const CACHED_PLAYER_DASHBOARD_KEY = 'best_official_cached_player_dashboard'
+
+function getInitialPlayerDashboard(): any {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.sessionStorage.getItem(CACHED_PLAYER_DASHBOARD_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    // Ignore storage parse failure
+  }
+  return null
+}
+
 export function PlayerDashboardTab({
   onNavigateToTab,
 }: {
   onNavigateToTab: (tab: any) => void
 }) {
-  const { user, token } = useAuth()
+  const { token, user } = useAuth()
   const today = getTodayDateString()
   const formattedToday = formatSomaliDate(today)
   const currentMonth = getCurrentMonthKey()
 
-  const [dashboard, setDashboard] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const initialDashboard = getInitialPlayerDashboard()
+  const [dashboard, setDashboard] = useState<any>(initialDashboard)
+  const [isLoading, setIsLoading] = useState(!initialDashboard)
   const [loadError, setLoadError] = useState('')
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const loadDashboard = useCallback(() => {
     if (!token) return
-    setIsLoading(true)
+    if (!dashboard) {
+      setIsLoading(true)
+    }
     setLoadError('')
     getPlayerDashboardSummaryFn({ data: { sessionToken: token } })
       .then((data) => {
         setDashboard(data)
+        if (typeof window !== 'undefined' && data) {
+          window.sessionStorage.setItem(
+            CACHED_PLAYER_DASHBOARD_KEY,
+            JSON.stringify(data),
+          )
+        }
       })
       .catch((err: any) => {
-        setLoadError(err?.message || 'Qalad ayaa dhacay soo dejinta xogtaada')
+        if (!dashboard) {
+          setLoadError(err?.message || 'Qalad ayaa dhacay soo dejinta xogtaada')
+        }
       })
       .finally(() => {
         setIsLoading(false)
       })
-  }, [token])
+  }, [token, dashboard])
 
   useEffect(() => {
     loadDashboard()

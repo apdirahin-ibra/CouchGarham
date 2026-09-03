@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
   LogIn,
@@ -20,14 +20,32 @@ type PlayerOption = {
   position: string | null
 }
 
+const CACHED_ROSTER_KEY = 'best_official_cached_roster'
+
+function getInitialRoster(): PlayerOption[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.sessionStorage.getItem(CACHED_ROSTER_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    // Ignore storage parse failure
+  }
+  return []
+}
+
 export function LoginView() {
   const { loginAdmin, loginPlayer } = useAuth()
   const [activeTab, setActiveTab] = useState<'player' | 'admin'>('player')
 
-  const [players, setPlayers] = useState<PlayerOption[]>([])
-  const [selectedPlayerId, setSelectedPlayerId] = useState('')
+  const initialRoster = getInitialRoster()
+  const [players, setPlayers] = useState<PlayerOption[]>(initialRoster)
+  const [selectedPlayerId, setSelectedPlayerId] = useState(
+    initialRoster[0]?.id ?? '',
+  )
   const [searchQuery, setSearchQuery] = useState('')
-  const [isLoadingRoster, setIsLoadingRoster] = useState(true)
+  const [isLoadingRoster, setIsLoadingRoster] = useState(
+    initialRoster.length === 0,
+  )
   const [rosterError, setRosterError] = useState('')
   const [playerLoginBusy, setPlayerLoginBusy] = useState(false)
   const [playerError, setPlayerError] = useState('')
@@ -45,27 +63,35 @@ export function LoginView() {
   const [joinSuccess, setJoinSuccess] = useState(false)
   const [joinError, setJoinError] = useState('')
 
-  const loadRoster = async () => {
-    setIsLoadingRoster(true)
+  const loadRoster = useCallback(async () => {
+    if (players.length === 0) {
+      setIsLoadingRoster(true)
+    }
     setRosterError('')
     try {
       const roster = await getRosterForLoginFn()
-      setPlayers(roster || [])
-      if (roster && roster.length > 0) {
-        setSelectedPlayerId(roster[0]?.id ?? '')
+      const list = roster || []
+      setPlayers(list)
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem(CACHED_ROSTER_KEY, JSON.stringify(list))
+      }
+      if (list.length > 0) {
+        setSelectedPlayerId((prev) => prev || list[0]?.id || '')
       }
     } catch (err: any) {
-      setRosterError(
-        err?.message || 'Qalad ayaa dhacay soo dejinta liiska ciyaartooyda',
-      )
+      if (players.length === 0) {
+        setRosterError(
+          err?.message || 'Qalad ayaa dhacay soo dejinta liiska ciyaartooyda',
+        )
+      }
     } finally {
       setIsLoadingRoster(false)
     }
-  }
+  }, [players.length])
 
   useEffect(() => {
     loadRoster()
-  }, [])
+  }, [loadRoster])
 
   const handlePlayerLogin = async (e: React.FormEvent) => {
     e.preventDefault()

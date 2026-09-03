@@ -22,6 +22,19 @@ import { Button, Dialog, SectionTitle, StatTile, TicketCard } from '../ui'
 
 type AttendanceListType = 'xadir' | 'maqan' | 'daahay' | 'unrecorded' | null
 
+const CACHED_ADMIN_DASHBOARD_KEY = 'best_official_cached_admin_dashboard'
+
+function getInitialAdminDashboard(): any {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.sessionStorage.getItem(CACHED_ADMIN_DASHBOARD_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    // Ignore storage parse failure
+  }
+  return null
+}
+
 export function AdminDashboardTab({
   onNavigateToTab,
   onPendingRequestsCountChange,
@@ -36,30 +49,41 @@ export function AdminDashboardTab({
 
   const [activeListModal, setActiveListModal] =
     useState<AttendanceListType>(null)
-  const [dashboardData, setDashboardData] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const initialData = getInitialAdminDashboard()
+  const [dashboardData, setDashboardData] = useState<any>(initialData)
+  const [isLoading, setIsLoading] = useState(!initialData)
   const [loadError, setLoadError] = useState('')
 
   const loadDashboard = useCallback(() => {
     if (!token) return
-    setIsLoading(true)
+    if (!dashboardData) {
+      setIsLoading(true)
+    }
     setLoadError('')
     getAdminDashboardFn({ data: { sessionToken: token } })
       .then((data) => {
         setDashboardData(data)
+        if (typeof window !== 'undefined' && data) {
+          window.sessionStorage.setItem(
+            CACHED_ADMIN_DASHBOARD_KEY,
+            JSON.stringify(data),
+          )
+        }
         if (data?.pendingRequests?.total !== undefined) {
           onPendingRequestsCountChange?.(data.pendingRequests.total)
         }
       })
       .catch((err: any) => {
-        setLoadError(
-          err?.message || 'Qalad ayaa dhacay soo dejinta dashboard-ka',
-        )
+        if (!dashboardData) {
+          setLoadError(
+            err?.message || 'Qalad ayaa dhacay soo dejinta dashboard-ka',
+          )
+        }
       })
       .finally(() => {
         setIsLoading(false)
       })
-  }, [token, onPendingRequestsCountChange])
+  }, [token, onPendingRequestsCountChange, dashboardData])
 
   useEffect(() => {
     loadDashboard()

@@ -12,13 +12,36 @@ import type { AuthenticatedActor } from './authorization'
 export { useAuth } from './auth-context'
 
 const STORAGE_TOKEN_KEY = 'best_official_session_token'
+const STORAGE_USER_KEY = 'best_official_session_actor'
+
+function getSavedAuth(): {
+  user: AuthenticatedActor | null
+  token: string | null
+} {
+  if (typeof window === 'undefined') return { user: null, token: null }
+  try {
+    const savedToken = window.localStorage.getItem(STORAGE_TOKEN_KEY)
+    const savedUser = window.localStorage.getItem(STORAGE_USER_KEY)
+    if (savedToken && savedUser) {
+      return { user: JSON.parse(savedUser), token: savedToken }
+    }
+  } catch {
+    // Ignore storage parse failure
+  }
+  return { user: null, token: null }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthenticatedActor | null>(null)
-  const [token, setToken] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const initial = getSavedAuth()
+  const [user, setUser] = useState<AuthenticatedActor | null>(initial.user)
+  const [token, setToken] = useState<string | null>(initial.token)
+  const [isLoading, setIsLoading] = useState(
+    !initial.user &&
+      typeof window !== 'undefined' &&
+      !!window.localStorage.getItem(STORAGE_TOKEN_KEY),
+  )
 
-  // Validate session against server on startup
+  // Validate session against server in the background
   useEffect(() => {
     let mounted = true
     const savedToken =
@@ -37,15 +60,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (actor) {
           setUser(actor)
           setToken(savedToken)
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(actor))
+          }
         } else {
           window.localStorage.removeItem(STORAGE_TOKEN_KEY)
+          window.localStorage.removeItem(STORAGE_USER_KEY)
           setUser(null)
           setToken(null)
         }
       })
       .catch((err) => {
         console.warn('Session verification fallback:', err)
-        if (mounted) {
+        if (mounted && !initial.user) {
           setUser(null)
           setToken(null)
         }
@@ -57,35 +84,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [initial.user])
 
   const loginPlayer = useCallback(async (playerId: string) => {
-    setIsLoading(true)
-    try {
-      const res = await loginPlayerFn({ data: { playerId } })
-      setUser(res.actor)
-      setToken(res.token)
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(STORAGE_TOKEN_KEY, res.token)
-      }
-    } finally {
-      setIsLoading(false)
+    const res = await loginPlayerFn({ data: { playerId } })
+    setUser(res.actor)
+    setToken(res.token)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(STORAGE_TOKEN_KEY, res.token)
+      window.localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(res.actor))
     }
   }, [])
 
   const loginAdmin = useCallback(async (username: string, pass: string) => {
-    setIsLoading(true)
-    try {
-      const res = await loginAdminFn({
-        data: { username: username.trim(), password: pass },
-      })
-      setUser(res.actor)
-      setToken(res.token)
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(STORAGE_TOKEN_KEY, res.token)
-      }
-    } finally {
-      setIsLoading(false)
+    const res = await loginAdminFn({
+      data: { username: username.trim(), password: pass },
+    })
+    setUser(res.actor)
+    setToken(res.token)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(STORAGE_TOKEN_KEY, res.token)
+      window.localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(res.actor))
     }
   }, [])
 
@@ -101,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null)
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(STORAGE_TOKEN_KEY)
+      window.localStorage.removeItem(STORAGE_USER_KEY)
     }
   }, [token])
 
