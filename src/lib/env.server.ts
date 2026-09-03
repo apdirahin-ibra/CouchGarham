@@ -54,9 +54,10 @@ export function getServerEnv(): ServerEnvironment {
       SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
     },
     public: {
-      SUPABASE_URL: env.SUPABASE_URL,
-      SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY,
-      VITE_APP_URL: env.VITE_APP_URL,
+      SUPABASE_URL: env.SUPABASE_URL || env.VITE_SUPABASE_URL,
+      SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY,
+      VITE_APP_URL:
+        env.VITE_APP_URL || env.BETTER_AUTH_URL || 'http://localhost:3000',
     },
   })
 

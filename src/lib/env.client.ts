@@ -13,9 +13,15 @@ import {
  */
 export function getPublicEnv(): PublicEnvironment {
   const result = publicEnvironmentSchema.safeParse({
-    SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-    SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
-    VITE_APP_URL: import.meta.env.VITE_APP_URL,
+    SUPABASE_URL:
+      import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY:
+      import.meta.env.VITE_SUPABASE_ANON_KEY ||
+      import.meta.env.SUPABASE_ANON_KEY,
+    VITE_APP_URL:
+      import.meta.env.VITE_APP_URL ||
+      import.meta.env.BETTER_AUTH_URL ||
+      'http://localhost:3000',
   })
 
   if (!result.success) {
