@@ -53,6 +53,31 @@ function IndexPage() {
     }
   }, [user?.role, token, adminTab])
 
+  const [visitedAdminTabs, setVisitedAdminTabs] = useState<Set<string>>(
+    () => new Set(['dashboard']),
+  )
+  const [visitedPlayerTabs, setVisitedPlayerTabs] = useState<Set<string>>(
+    () => new Set(['dashboard']),
+  )
+
+  useEffect(() => {
+    setVisitedAdminTabs((prev) => {
+      if (prev.has(adminTab)) return prev
+      const next = new Set(prev)
+      next.add(adminTab)
+      return next
+    })
+  }, [adminTab])
+
+  useEffect(() => {
+    setVisitedPlayerTabs((prev) => {
+      if (prev.has(playerTab)) return prev
+      const next = new Set(prev)
+      next.add(playerTab)
+      return next
+    })
+  }, [playerTab])
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-pitch-deep text-chalk flex items-center justify-center p-4">
@@ -77,22 +102,64 @@ function IndexPage() {
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8">
         {user.role === 'admin' ? (
           <>
-            {adminTab === 'dashboard' && (
-              <AdminDashboardTab
-                onNavigateToTab={setAdminTab}
-                onPendingRequestsCountChange={setPendingRequestsCount}
-              />
+            {visitedAdminTabs.has('dashboard') && (
+              <div className={adminTab === 'dashboard' ? 'block' : 'hidden'}>
+                <AdminDashboardTab
+                  onNavigateToTab={setAdminTab}
+                  onPendingRequestsCountChange={setPendingRequestsCount}
+                />
+              </div>
             )}
-            {adminTab === 'players' && <AdminPlayersTab />}
-            {adminTab === 'attendance' && <AdminAttendanceTab />}
-            {adminTab === 'stats' && <AdminStatsTab />}
-            {adminTab === 'requests' && <AdminRequestsTab />}
-            {adminTab === 'schedule' && <AdminScheduleTab />}
-            {adminTab === 'chat' && <AdminChatTab />}
-            {adminTab === 'gallery' && <AdminGalleryTab />}
-            {adminTab === 'finance' && <AdminFinanceTab />}
-            {adminTab === 'tips' && <AdminWaanoTab />}
-            {adminTab === 'rules' && <AdminRulesTab />}
+            {visitedAdminTabs.has('players') && (
+              <div className={adminTab === 'players' ? 'block' : 'hidden'}>
+                <AdminPlayersTab />
+              </div>
+            )}
+            {visitedAdminTabs.has('attendance') && (
+              <div className={adminTab === 'attendance' ? 'block' : 'hidden'}>
+                <AdminAttendanceTab />
+              </div>
+            )}
+            {visitedAdminTabs.has('stats') && (
+              <div className={adminTab === 'stats' ? 'block' : 'hidden'}>
+                <AdminStatsTab />
+              </div>
+            )}
+            {visitedAdminTabs.has('requests') && (
+              <div className={adminTab === 'requests' ? 'block' : 'hidden'}>
+                <AdminRequestsTab />
+              </div>
+            )}
+            {visitedAdminTabs.has('schedule') && (
+              <div className={adminTab === 'schedule' ? 'block' : 'hidden'}>
+                <AdminScheduleTab />
+              </div>
+            )}
+            {visitedAdminTabs.has('chat') && (
+              <div className={adminTab === 'chat' ? 'block' : 'hidden'}>
+                <AdminChatTab />
+              </div>
+            )}
+            {visitedAdminTabs.has('gallery') && (
+              <div className={adminTab === 'gallery' ? 'block' : 'hidden'}>
+                <AdminGalleryTab />
+              </div>
+            )}
+            {visitedAdminTabs.has('finance') && (
+              <div className={adminTab === 'finance' ? 'block' : 'hidden'}>
+                <AdminFinanceTab />
+              </div>
+            )}
+            {visitedAdminTabs.has('tips') && (
+              <div className={adminTab === 'tips' ? 'block' : 'hidden'}>
+                <AdminWaanoTab />
+              </div>
+            )}
+            {visitedAdminTabs.has('rules') && (
+              <div className={adminTab === 'rules' ? 'block' : 'hidden'}>
+                <AdminRulesTab />
+              </div>
+            )}
 
             <BottomNav
               tabs={ADMIN_TABS}
@@ -103,18 +170,58 @@ function IndexPage() {
           </>
         ) : (
           <>
-            {playerTab === 'dashboard' && (
-              <PlayerDashboardTab onNavigateToTab={setPlayerTab} />
+            {visitedPlayerTabs.has('dashboard') && (
+              <div className={playerTab === 'dashboard' ? 'block' : 'hidden'}>
+                <PlayerDashboardTab onNavigateToTab={setPlayerTab} />
+              </div>
             )}
-            {playerTab === 'attendance' && <PlayerAttendanceTab />}
-            {playerTab === 'schedule' && <PlayerScheduleTab />}
-            {playerTab === 'leaves' && <PlayerLeaveTab />}
-            {playerTab === 'suggestions' && <PlayerSuggestionsTab />}
-            {playerTab === 'chat' && <PlayerChatTab />}
-            {playerTab === 'gallery' && <PlayerGalleryTab />}
-            {playerTab === 'finance' && <PlayerFinanceTab />}
-            {playerTab === 'tips' && <PlayerWaanoTab />}
-            {playerTab === 'rules' && <PlayerRulesTab />}
+            {visitedPlayerTabs.has('attendance') && (
+              <div className={playerTab === 'attendance' ? 'block' : 'hidden'}>
+                <PlayerAttendanceTab />
+              </div>
+            )}
+            {visitedPlayerTabs.has('schedule') && (
+              <div className={playerTab === 'schedule' ? 'block' : 'hidden'}>
+                <PlayerScheduleTab />
+              </div>
+            )}
+            {visitedPlayerTabs.has('leaves') && (
+              <div className={playerTab === 'leaves' ? 'block' : 'hidden'}>
+                <PlayerLeaveTab />
+              </div>
+            )}
+            {visitedPlayerTabs.has('suggestions') && (
+              <div
+                className={playerTab === 'suggestions' ? 'block' : 'hidden'}
+              >
+                <PlayerSuggestionsTab />
+              </div>
+            )}
+            {visitedPlayerTabs.has('chat') && (
+              <div className={playerTab === 'chat' ? 'block' : 'hidden'}>
+                <PlayerChatTab />
+              </div>
+            )}
+            {visitedPlayerTabs.has('gallery') && (
+              <div className={playerTab === 'gallery' ? 'block' : 'hidden'}>
+                <PlayerGalleryTab />
+              </div>
+            )}
+            {visitedPlayerTabs.has('finance') && (
+              <div className={playerTab === 'finance' ? 'block' : 'hidden'}>
+                <PlayerFinanceTab />
+              </div>
+            )}
+            {visitedPlayerTabs.has('tips') && (
+              <div className={playerTab === 'tips' ? 'block' : 'hidden'}>
+                <PlayerWaanoTab />
+              </div>
+            )}
+            {visitedPlayerTabs.has('rules') && (
+              <div className={playerTab === 'rules' ? 'block' : 'hidden'}>
+                <PlayerRulesTab />
+              </div>
+            )}
 
             <BottomNav
               tabs={PLAYER_TABS}
