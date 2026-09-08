@@ -319,3 +319,5 @@ export function StateMessage({
     </div>
   )
 }
+
+export { StarRating } from './StarRating'

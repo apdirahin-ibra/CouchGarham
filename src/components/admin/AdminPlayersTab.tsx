@@ -1,25 +1,37 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
+  Calendar,
+  Check,
   Edit,
   Eye,
   KeyRound,
+  MessageCircle,
   Phone,
   Plus,
   RefreshCw,
   Search,
+  Star,
   Trash2,
   UserCheck,
   UserX,
 } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
+import { getTodayDateString } from '../../lib/dates'
+import {
+  computeOverallRatingScore,
+  PLAYER_RATING_CRITERIA,
+} from '../../lib/ratings'
+import { getWhatsAppUrl } from '../../lib/whatsapp'
 import {
   createPlayerAdminFn,
   deletePlayerAdminFn,
   generatePlayerPinFn,
   getAdminPlayersFn,
+  getAllPlayersRatingsForDateFn,
   getPlayerDetailAdminFn,
+  savePlayerMatchRatingFn,
   togglePlayerActiveAdminFn,
   updatePlayerAdminFn,
 } from '../../server/api'
@@ -27,6 +39,7 @@ import {
   Button,
   Dialog,
   SectionTitle,
+  StarRating,
   StatusBadge,
   TextField,
   TicketCard,
@@ -42,6 +55,145 @@ type Player = {
   whatsapp: string | null
   legacyPin?: string | null
   isActive: boolean
+}
+
+function PlayerCardRatingSection({
+  player,
+  matchDate,
+  initialRating,
+  token,
+  onSaved,
+}: {
+  player: Player
+  matchDate: string
+  initialRating?: any
+  token: string
+  onSaved: (rating: any) => void
+}) {
+  const { notify } = useToast()
+  const [isSaving, setIsSaving] = useState(false)
+  const [ratings, setRatings] = useState<Record<string, number>>({})
+  const [notes, setNotes] = useState('')
+
+  useEffect(() => {
+    if (initialRating) {
+      setRatings({
+        dhankaGoolka: initialRating.dhankaGoolka || 0,
+        caawinta: initialRating.caawinta || 0,
+        anshaxaCiyaarta: initialRating.anshaxaCiyaarta || 0,
+        kalsoonida: initialRating.kalsoonida || 0,
+        laDhaqankaMacalinka: initialRating.laDhaqankaMacalinka || 0,
+        laDhaqankaCiyaartoydaKale: initialRating.laDhaqankaCiyaartoydaKale || 0,
+        shaqadaLooDiray: initialRating.shaqadaLooDiray || 0,
+        waajibaadkaBooska: initialRating.waajibaadkaBooska || 0,
+        masuuliyadda: initialRating.masuuliyadda || 0,
+        taktikada: initialRating.taktikada || 0,
+      })
+      setNotes(initialRating.coachNotes || '')
+    } else {
+      setRatings({})
+      setNotes('')
+    }
+  }, [initialRating, matchDate])
+
+  const overall = computeOverallRatingScore(ratings)
+
+  const handleSave = async () => {
+    if (!token) return
+    setIsSaving(true)
+    try {
+      const saved = await savePlayerMatchRatingFn({
+        data: {
+          sessionToken: token,
+          playerId: player.id,
+          matchDate,
+          dhankaGoolka: ratings.dhankaGoolka || 0,
+          caawinta: ratings.caawinta || 0,
+          anshaxaCiyaarta: ratings.anshaxaCiyaarta || 0,
+          kalsoonida: ratings.kalsoonida || 0,
+          laDhaqankaMacalinka: ratings.laDhaqankaMacalinka || 0,
+          laDhaqankaCiyaartoydaKale: ratings.laDhaqankaCiyaartoydaKale || 0,
+          shaqadaLooDiray: ratings.shaqadaLooDiray || 0,
+          waajibaadkaBooska: ratings.waajibaadkaBooska || 0,
+          masuuliyadda: ratings.masuuliyadda || 0,
+          taktikada: ratings.taktikada || 0,
+          coachNotes: notes.trim() || null,
+        },
+      })
+      onSaved(saved)
+      notify(
+        `Qiimeynta ${player.name} (${overall.formatted}⭐) si guul leh ayaa loo keydiyay!`,
+        'success',
+      )
+    } catch (err: any) {
+      notify(err?.message || 'Qalad ayaa dhacay keydinta qiimeynta', 'danger')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-club-border bg-pitch-deep/90 p-3 space-y-2.5">
+      <div className="flex items-center justify-between border-b border-club-border/60 pb-2">
+        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold">
+          <Star className="h-3.5 w-3.5 fill-gold text-gold" />
+          <span>QIIMAYNTA CIYAARTA MAANTA</span>
+        </div>
+        {overall.average > 0 ? (
+          <span className="flex items-center gap-1 font-mono text-xs font-bold text-gold bg-surface-raised px-2 py-0.5 rounded border border-gold/30">
+            ⭐ {overall.formatted} / 5.0
+            <span className="text-[0.625rem] text-chalk-dim font-normal font-sans ml-0.5">
+              ({overall.badge})
+            </span>
+          </span>
+        ) : (
+          <span className="text-[0.6875rem] text-muted">Aan la qiimeyn</span>
+        )}
+      </div>
+
+      <div className="space-y-1.5 divide-y divide-club-border/25">
+        {PLAYER_RATING_CRITERIA.map((criterion) => (
+          <div
+            key={criterion.key}
+            className="flex items-center justify-between pt-1 text-xs"
+          >
+            <span
+              className="text-chalk font-medium truncate max-w-[150px] sm:max-w-[200px]"
+              title={criterion.description}
+            >
+              {criterion.label}
+            </span>
+            <StarRating
+              value={ratings[criterion.key] || 0}
+              onChange={(val) =>
+                setRatings((prev) => ({ ...prev, [criterion.key]: val }))
+              }
+              size="sm"
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 border-t border-club-border/50">
+        <input
+          type="text"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Talo / faallo gaar ah macalinka..."
+          className="flex-1 rounded bg-surface px-2.5 py-1 text-xs text-chalk border border-club-border focus:border-gold focus:outline-none"
+        />
+        <Button
+          variant="primary"
+          className="text-xs h-7 px-3 shrink-0 self-end sm:self-auto gap-1"
+          busy={isSaving}
+          onClick={handleSave}
+        >
+          <Check className="h-3.5 w-3.5" />
+          <span>Keydi Qiimeynta</span>
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 export function AdminPlayersTab() {
@@ -92,6 +244,33 @@ export function AdminPlayersTab() {
       setIsDeleting(false)
     }
   }
+
+  const [selectedMatchDate, setSelectedMatchDate] =
+    useState(getTodayDateString())
+  const [dateRatings, setDateRatings] = useState<Record<string, any>>({})
+
+  const loadDateRatings = useCallback(
+    async (date: string) => {
+      if (!token) return
+      try {
+        const list = await getAllPlayersRatingsForDateFn({
+          data: { sessionToken: token, matchDate: date },
+        })
+        const map: Record<string, any> = {}
+        for (const item of list || []) {
+          map[item.playerId] = item
+        }
+        setDateRatings(map)
+      } catch {
+        // Ignore rating fetch error
+      }
+    },
+    [token],
+  )
+
+  useEffect(() => {
+    loadDateRatings(selectedMatchDate)
+  }, [loadDateRatings, selectedMatchDate])
 
   const loadPlayers = useCallback(async () => {
     if (!token) return
@@ -311,6 +490,34 @@ export function AdminPlayersTab() {
         </label>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-lg border border-gold/30 bg-pitch-deep p-3">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-gold" />
+          <span className="text-xs font-bold text-chalk uppercase tracking-wide">
+            Taariikhda Ciyaarta la Qiimeynayo:
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={selectedMatchDate}
+            onChange={(e) =>
+              setSelectedMatchDate(e.target.value || getTodayDateString())
+            }
+            className="rounded border border-club-border bg-surface px-2.5 py-1 text-xs text-chalk font-mono focus:border-gold focus:outline-none"
+          />
+          {selectedMatchDate !== getTodayDateString() ? (
+            <Button
+              variant="ghost"
+              className="text-[0.6875rem] py-0.5 px-2 h-7 text-gold"
+              onClick={() => setSelectedMatchDate(getTodayDateString())}
+            >
+              Maanta
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="flex h-48 items-center justify-center rounded-xl border border-club-border bg-surface text-gold">
           <RefreshCw className="h-5 w-5 animate-spin mr-2" />
@@ -382,9 +589,36 @@ export function AdminPlayersTab() {
                     </span>
                   ) : null}
                 </div>
+
+                <PlayerCardRatingSection
+                  player={player}
+                  matchDate={selectedMatchDate}
+                  initialRating={dateRatings[player.id]}
+                  token={token || ''}
+                  onSaved={(saved) => {
+                    setDateRatings((prev) => ({
+                      ...prev,
+                      [player.id]: saved,
+                    }))
+                  }}
+                />
               </div>
 
               <div className="mt-4 flex flex-wrap items-center justify-end gap-1.5 sm:gap-2 border-t border-club-border pt-3">
+                {player.whatsapp ? (
+                  <Button
+                    variant="secondary"
+                    className="text-xs py-1 px-2 sm:px-2.5 h-8 text-success hover:border-success/60 gap-1"
+                    onClick={() => {
+                      const url = getWhatsAppUrl(player.whatsapp!)
+                      if (url) window.open(url, '_blank')
+                    }}
+                    title={`Kula xiriir ${player.name} WhatsApp`}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5 text-success fill-success/20" />
+                    <span>WhatsApp</span>
+                  </Button>
+                ) : null}
                 <Button
                   variant="ghost"
                   className="text-xs py-1 px-2 sm:px-2.5 h-8"
@@ -401,7 +635,7 @@ export function AdminPlayersTab() {
                   title="Wax ka beddel ciyaartoygan"
                 >
                   <Edit className="h-3.5 w-3.5" />
-                  <span>Wax Ka Beddel</span>
+                  <span>Edit</span>
                 </Button>
                 <Button
                   variant={player.isActive ? 'secondary' : 'primary'}
@@ -426,6 +660,7 @@ export function AdminPlayersTab() {
                   title={`Tirtir ${player.name} database-ka (Delete player)`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
+                  <span className="text-xs">Tirtir</span>
                 </Button>
               </div>
             </TicketCard>
@@ -613,6 +848,47 @@ export function AdminPlayersTab() {
                   {viewingPlayer.currentMonthStats?.errors ?? 0}
                 </strong>
               </div>
+            </div>
+
+            <div className="rounded-lg border border-club-border bg-surface-raised p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gold uppercase tracking-wider">
+                  Celceliska Qiimeynta Kulamada
+                </span>
+                <span className="font-mono text-sm font-bold text-gold">
+                  ⭐ {viewingPlayer.averageRating || '0.0'} / 5.0
+                </span>
+              </div>
+              {viewingPlayer.recentRatings &&
+              viewingPlayer.recentRatings.length > 0 ? (
+                <div className="space-y-1.5 pt-1">
+                  {viewingPlayer.recentRatings.map((r: any) => (
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between text-xs rounded bg-pitch-deep px-2.5 py-1.5 border border-club-border/40"
+                    >
+                      <span className="text-chalk font-mono">
+                        {r.matchDate}
+                      </span>
+                      <span className="text-gold font-bold">
+                        ⭐ {r.overallRating} / 5.0
+                      </span>
+                      {r.coachNotes ? (
+                        <span
+                          className="text-[0.6875rem] text-muted truncate max-w-[130px]"
+                          title={r.coachNotes}
+                        >
+                          {r.coachNotes}
+                        </span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted m-0">
+                  Weli kulamo lama qiimeyn.
+                </p>
+              )}
             </div>
 
             <div className="flex justify-end pt-2">

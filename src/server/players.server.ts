@@ -13,6 +13,7 @@ import {
   excuseRequests,
   leaveRequests,
   loginLogs,
+  playerMatchRatings,
   playerMonthlyStats,
   players,
   suggestions,
@@ -240,6 +241,22 @@ export async function getPlayerDetailAdmin(id: string, monthKey?: string) {
     .orderBy(desc(leaveRequests.leaveDate))
     .limit(10)
 
+  const ratings = await db
+    .select()
+    .from(playerMatchRatings)
+    .where(eq(playerMatchRatings.playerId, id))
+    .orderBy(desc(playerMatchRatings.matchDate))
+    .limit(10)
+
+  const sumRatings = ratings.reduce(
+    (sum, r) => sum + (parseFloat(r.overallRating) || 0),
+    0,
+  )
+  const averageRating =
+    ratings.length > 0
+      ? (Math.round((sumRatings / ratings.length) * 10) / 10).toFixed(1)
+      : '0.0'
+
   return {
     player,
     currentMonthStats: stats ?? {
@@ -251,6 +268,8 @@ export async function getPlayerDetailAdmin(id: string, monthKey?: string) {
     recentAttendance: attendance,
     recentExcuses: excuses,
     recentLeaves: leaves,
+    recentRatings: ratings,
+    averageRating,
   }
 }
 
@@ -279,6 +298,7 @@ export async function deletePlayerAdmin(
   await db.delete(leaveRequests).where(eq(leaveRequests.playerId, id))
   await db.delete(suggestions).where(eq(suggestions.playerId, id))
   await db.delete(playerMonthlyStats).where(eq(playerMonthlyStats.playerId, id))
+  await db.delete(playerMatchRatings).where(eq(playerMatchRatings.playerId, id))
 
   // Nullify references in chat and logs so chat history remains readable with snapshot names
   await db

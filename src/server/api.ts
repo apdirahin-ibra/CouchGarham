@@ -71,7 +71,13 @@ import {
   updateScheduleEntry,
 } from './schedule.server'
 import {
+  getAllPlayersRatingsForDate,
   getCurrentMonthRosterStats,
+  getPlayerLatestRating,
+  getPlayerMatchRating,
+  getPlayerMatchRatingsHistory,
+  getRosterRatingsSummary,
+  savePlayerMatchRating,
   updatePlayerMonthlyStats,
 } from './stats.server'
 import {
@@ -424,6 +430,135 @@ export const updatePlayerMonthlyStatsFn = createServerFn({ method: 'POST' })
     const actor = await resolveActorFromToken(data.sessionToken)
     requireAdmin(actor)
     return updatePlayerMonthlyStats(data)
+  })
+
+export const savePlayerMatchRatingFn = createServerFn({ method: 'POST' })
+  .validator(
+    (data: {
+      sessionToken: string
+      playerId: string
+      matchDate: string
+      matchTitle?: string | null
+      dhankaGoolka: number
+      caawinta: number
+      anshaxaCiyaarta: number
+      kalsoonida: number
+      laDhaqankaMacalinka: number
+      laDhaqankaCiyaartoydaKale: number
+      shaqadaLooDiray: number
+      waajibaadkaBooska: number
+      masuuliyadda: number
+      taktikada: number
+      coachNotes?: string | null
+    }) =>
+      z
+        .object({
+          sessionToken: z.string().max(256),
+          playerId: z.string().uuid(),
+          matchDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          matchTitle: z.string().max(255).optional().nullable(),
+          dhankaGoolka: z.number().int().min(0).max(5),
+          caawinta: z.number().int().min(0).max(5),
+          anshaxaCiyaarta: z.number().int().min(0).max(5),
+          kalsoonida: z.number().int().min(0).max(5),
+          laDhaqankaMacalinka: z.number().int().min(0).max(5),
+          laDhaqankaCiyaartoydaKale: z.number().int().min(0).max(5),
+          shaqadaLooDiray: z.number().int().min(0).max(5),
+          waajibaadkaBooska: z.number().int().min(0).max(5),
+          masuuliyadda: z.number().int().min(0).max(5),
+          taktikada: z.number().int().min(0).max(5),
+          coachNotes: z.string().max(1000).optional().nullable(),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return savePlayerMatchRating(data)
+  })
+
+export const getPlayerMatchRatingForDateFn = createServerFn({ method: 'POST' })
+  .validator(
+    (data: { sessionToken: string; playerId: string; matchDate: string }) =>
+      z
+        .object({
+          sessionToken: z.string().max(256),
+          playerId: z.string().uuid(),
+          matchDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireSession(actor)
+    return getPlayerMatchRating(data.playerId, data.matchDate)
+  })
+
+export const getPlayerLatestRatingFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string; playerId?: string }) =>
+    z
+      .object({
+        sessionToken: z.string().max(256),
+        playerId: z.string().uuid().optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    const session = requireSession(actor)
+    const targetPlayerId =
+      data.playerId ||
+      (session.role === 'player' ? session.playerId : undefined)
+    if (!targetPlayerId) {
+      throw new Error('Ciyaartoyga lama cayimin (Player ID required)')
+    }
+    return getPlayerLatestRating(targetPlayerId)
+  })
+
+export const getPlayerMatchRatingsHistoryFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string; playerId?: string }) =>
+    z
+      .object({
+        sessionToken: z.string().max(256),
+        playerId: z.string().uuid().optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    const session = requireSession(actor)
+    const targetPlayerId =
+      data.playerId ||
+      (session.role === 'player' ? session.playerId : undefined)
+    if (!targetPlayerId) {
+      throw new Error('Ciyaartoyga lama cayimin (Player ID required)')
+    }
+    return getPlayerMatchRatingsHistory(targetPlayerId)
+  })
+
+export const getAllPlayersRatingsForDateFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string; matchDate: string }) =>
+    z
+      .object({
+        sessionToken: z.string().max(256),
+        matchDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return getAllPlayersRatingsForDate(data.matchDate)
+  })
+
+export const getRosterRatingsSummaryFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string }) =>
+    z.object({ sessionToken: z.string().max(256) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return getRosterRatingsSummary()
   })
 
 /* ==================== REQUESTS & APPROVALS ==================== */

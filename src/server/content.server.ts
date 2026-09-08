@@ -29,7 +29,11 @@ import { getActiveRoster } from './players.server'
 import { getPlayerLeaves, getRequestsInboxAdmin } from './requests.server'
 import { OFFICIAL_CLUB_RULES } from '../data/rules-data'
 import { OFFICIAL_100_TIPS } from '../data/tips-data'
-import { getPlayerMonthlyStats } from './stats.server'
+import {
+  getPlayerLatestRating,
+  getPlayerMatchRatingsHistory,
+  getPlayerMonthlyStats,
+} from './stats.server'
 import { resolveStorageUrl, VOICE_BUCKET } from './storage.server'
 
 /* ==================== WAANO (TIPS) ==================== */
@@ -372,11 +376,20 @@ export async function getPlayerDashboardSummary(playerId: string) {
   const currentMonth = getCurrentMonthKey()
   const { startDate, nextMonthStartDate } = getMonthDateRange(currentMonth)
 
-  const [settings, monthStats, leaves, todayAttendance] = await Promise.all([
+  const [
+    settings,
+    monthStats,
+    leaves,
+    todayAttendance,
+    latestRating,
+    ratingsHistory,
+  ] = await Promise.all([
     getClubSettings(),
     getPlayerMonthlyStats(playerId),
     getPlayerLeaves(playerId),
     getAttendanceForDate(today),
+    getPlayerLatestRating(playerId),
+    getPlayerMatchRatingsHistory(playerId),
   ])
 
   const usedThisMonth = leaves.filter(
@@ -399,5 +412,9 @@ export async function getPlayerDashboardSummary(playerId: string) {
     stats: monthStats,
     leaveUsedThisMonth: usedThisMonth,
     leaveMaxPerMonth: 3,
+    latestRating,
+    ratingAverage: ratingsHistory.averageRating,
+    totalRatingsCount: ratingsHistory.totalMatches,
+    ratingHistoryList: ratingsHistory.ratings,
   }
 }

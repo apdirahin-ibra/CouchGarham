@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertCircle,
+  Award,
   Bell,
   Calendar,
   CheckCircle,
   Clock,
+  History,
   Pause,
   Play,
   RefreshCw,
+  Star,
   Volume2,
   XCircle,
 } from 'lucide-react'
@@ -18,8 +21,20 @@ import {
   getCurrentMonthKey,
   getTodayDateString,
 } from '../../lib/dates'
+import {
+  computeOverallRatingScore,
+  PLAYER_RATING_CRITERIA,
+} from '../../lib/ratings'
 import { getPlayerDashboardSummaryFn } from '../../server/api'
-import { Button, SectionTitle, StatTile, StatusBadge, TicketCard } from '../ui'
+import {
+  Button,
+  Dialog,
+  SectionTitle,
+  StarRating,
+  StatTile,
+  StatusBadge,
+  TicketCard,
+} from '../ui'
 
 const CACHED_PLAYER_DASHBOARD_KEY = 'best_official_cached_player_dashboard'
 
@@ -49,6 +64,7 @@ export function PlayerDashboardTab({
   const [isLoading, setIsLoading] = useState(!initialDashboard)
   const [loadError, setLoadError] = useState('')
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
+  const [showRatingsHistoryModal, setShowRatingsHistoryModal] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const loadDashboard = useCallback(() => {
@@ -98,6 +114,13 @@ export function PlayerDashboardTab({
     dashboard?.announcementAudioPath ?? dashboard?.announcementAudio ?? null
   const leaveUsedThisMonth = dashboard?.leaveUsedThisMonth ?? 0
   const leaveMaxPerMonth = dashboard?.leaveMaxPerMonth ?? 3
+  const latestRating = dashboard?.latestRating ?? null
+  const ratingAverage = dashboard?.ratingAverage ?? null
+  const totalRatingsCount = dashboard?.totalRatingsCount ?? 0
+  const ratingHistoryList = dashboard?.ratingHistoryList ?? []
+  const latestScore = latestRating
+    ? computeOverallRatingScore(latestRating)
+    : null
 
   const handleToggleVoice = () => {
     if (!audioRef.current) return
@@ -273,6 +296,120 @@ export function PlayerDashboardTab({
         ) : null}
       </TicketCard>
 
+      {/* Qiimeynta Ciyaartii Ugu Dambeysay */}
+      <TicketCard className="p-4 space-y-4 border-gold/40">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold/10 text-gold border border-gold/30">
+              <Award className="h-5 w-5" />
+            </div>
+            <div>
+              <SectionTitle eyebrow="QIIMEYNTA CIYAARTA" as="h3">
+                Qiimeyntaadii Ciyaartii Ugu Dambeysay
+              </SectionTitle>
+              {latestRating ? (
+                <span className="text-xs text-chalk-dim">
+                  Taariikhda: {formatSomaliDate(latestRating.matchDate)}
+                  {latestRating.matchTitle
+                    ? ` — ${latestRating.matchTitle}`
+                    : ''}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          {latestScore ? (
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <div className="text-right">
+                <div className="flex items-center gap-1 font-display text-lg font-bold text-gold">
+                  <Star className="h-4 w-4 fill-gold text-gold" />
+                  <span>{latestScore.formatted}</span>
+                  <span className="text-xs text-chalk-dim font-normal">
+                    / 5.0
+                  </span>
+                </div>
+                <span className="inline-block rounded px-1.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-wider bg-gold/20 text-gold border border-gold/30">
+                  {latestScore.badge}
+                </span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {latestRating ? (
+          <div className="space-y-3 pt-1">
+            {latestRating.coachNotes ? (
+              <div className="rounded-lg border border-club-border bg-pitch-deep p-3 text-xs leading-relaxed">
+                <span className="block font-bold text-gold mb-1 uppercase tracking-wider text-[0.625rem]">
+                  Faallada Macallinka:
+                </span>
+                <p className="m-0 italic text-chalk">
+                  "{latestRating.coachNotes}"
+                </p>
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {PLAYER_RATING_CRITERIA.map((criterion) => {
+                const val = (latestRating as any)[criterion.key] ?? 0
+                return (
+                  <div
+                    key={criterion.key}
+                    className="flex items-center justify-between rounded-lg border border-club-border/60 bg-surface-raised px-3 py-2"
+                  >
+                    <div className="pr-2 truncate">
+                      <span className="text-xs font-semibold text-chalk">
+                        {criterion.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <StarRating value={val} readOnly size="sm" />
+                      <span className="text-[0.6875rem] font-bold text-gold w-6 text-right">
+                        {val}/5
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2 border-t border-club-border/60">
+              <div className="text-xs text-chalk-dim">
+                <span>Celceliska Guud: </span>
+                <strong className="text-gold font-bold">
+                  ⭐ {ratingAverage || latestScore?.formatted || '0.0'} / 5.0
+                </strong>
+                <span className="text-[0.6875rem] text-chalk-dim ml-1">
+                  ({totalRatingsCount} kulan la qiimeeyay)
+                </span>
+              </div>
+
+              {ratingHistoryList.length > 0 ? (
+                <Button
+                  variant="secondary"
+                  className="text-xs py-1.5 px-3 h-8 gap-1.5 self-start sm:self-auto"
+                  onClick={() => setShowRatingsHistoryModal(true)}
+                >
+                  <History className="h-3.5 w-3.5 text-gold" />
+                  <span>Taariikhda Qiimeynta ({totalRatingsCount})</span>
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-club-border bg-pitch-deep p-4 text-center">
+            <Star className="h-7 w-7 text-gold/30 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-chalk mb-1">
+              Weli ma jirto qiimeyn kulan
+            </p>
+            <p className="text-xs text-chalk-dim m-0 max-w-sm mx-auto">
+              Macallinka ayaa ku qiimeyn doona ciyaar kasta ka dib marka aad ka
+              qayb qaadato kulanka.
+            </p>
+          </div>
+        )}
+      </TicketCard>
+
       <div>
         <SectionTitle eyebrow="NATIIJADAADA BISHA" as="h3">
           Xogtaada Bishan ({currentMonth})
@@ -310,6 +447,80 @@ export function PlayerDashboardTab({
           </span>
         </TicketCard>
       </div>
+
+      {/* Modal Taariikhda Qiimeynta */}
+      <Dialog
+        open={showRatingsHistoryModal}
+        onClose={() => setShowRatingsHistoryModal(false)}
+        title="Taariikhda Qiimeynta Kulamada"
+      >
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+          {ratingHistoryList.length === 0 ? (
+            <p className="text-sm text-chalk-dim text-center py-4">
+              Weli ma jiro taariikh qiimeyn oo la diiwaangeliyay.
+            </p>
+          ) : (
+            ratingHistoryList.map((rating: any) => {
+              const score = computeOverallRatingScore(rating)
+              return (
+                <div
+                  key={rating.id || rating.matchDate}
+                  className="rounded-xl border border-club-border bg-surface-raised p-4 space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-gold font-bold">
+                        {formatSomaliDate(rating.matchDate)}
+                      </span>
+                      {rating.matchTitle ? (
+                        <h4 className="text-sm font-bold text-chalk">
+                          {rating.matchTitle}
+                        </h4>
+                      ) : null}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-gold flex items-center gap-1 justify-end">
+                        <Star className="h-4 w-4 fill-gold text-gold" />
+                        {score.formatted} / 5.0
+                      </span>
+                      <span className="text-[0.625rem] text-chalk-dim uppercase font-semibold">
+                        {score.badge}
+                      </span>
+                    </div>
+                  </div>
+
+                  {rating.coachNotes ? (
+                    <div className="rounded-lg bg-pitch-deep border border-club-border p-2.5 text-xs text-chalk-dim">
+                      <strong className="text-gold block mb-1">
+                        Faallada Macallinka:
+                      </strong>
+                      <p className="m-0 italic text-chalk">
+                        "{rating.coachNotes}"
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-club-border text-xs">
+                    {PLAYER_RATING_CRITERIA.map((criterion) => (
+                      <div
+                        key={criterion.key}
+                        className="flex items-center justify-between bg-surface/50 px-2 py-1 rounded"
+                      >
+                        <span className="text-[0.6875rem] text-chalk truncate">
+                          {criterion.label}
+                        </span>
+                        <span className="text-[0.6875rem] text-gold font-bold ml-1 shrink-0">
+                          {(rating as any)[criterion.key] ?? 0}★
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </Dialog>
     </div>
   )
 }

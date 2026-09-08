@@ -35,8 +35,11 @@ export {
 } from './attendance'
 
 export {
+  playerMatchRatings,
   playerMonthlyStats,
+  type NewPlayerMatchRating,
   type NewPlayerMonthlyStat,
+  type PlayerMatchRating,
   type PlayerMonthlyStat,
 } from './stats'
 
