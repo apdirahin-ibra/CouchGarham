@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Edit,
   Eye,
+  KeyRound,
   Phone,
   Plus,
   RefreshCw,
@@ -14,6 +15,7 @@ import {
 import { useAuth } from '../../lib/auth-client'
 import {
   createPlayerAdminFn,
+  generatePlayerPinFn,
   getAdminPlayersFn,
   getPlayerDetailAdminFn,
   togglePlayerActiveAdminFn,
@@ -36,6 +38,7 @@ type Player = {
   jerseyNumber: number | null
   position: string | null
   whatsapp: string | null
+  legacyPin?: string | null
   isActive: boolean
 }
 
@@ -56,6 +59,8 @@ export function AdminPlayersTab() {
   const [jerseyNumber, setJerseyNumber] = useState('')
   const [position, setPosition] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
+  const [pin, setPin] = useState('')
+  const [isGeneratingPin, setIsGeneratingPin] = useState(false)
   const [isActive, setIsActive] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -79,7 +84,22 @@ export function AdminPlayersTab() {
     loadPlayers()
   }, [loadPlayers])
 
-  const openAddModal = () => {
+  const handleRegeneratePin = async () => {
+    if (!token) return
+    setIsGeneratingPin(true)
+    try {
+      const newPin = await generatePlayerPinFn({
+        data: { sessionToken: token },
+      })
+      if (newPin) setPin(newPin)
+    } catch {
+      setPin(String(Math.floor(1000 + Math.random() * 9000)))
+    } finally {
+      setIsGeneratingPin(false)
+    }
+  }
+
+  const openAddModal = async () => {
     setEditingPlayer(null)
     setName('')
     setNickname('')
@@ -87,7 +107,19 @@ export function AdminPlayersTab() {
     setPosition('')
     setWhatsapp('')
     setIsActive(true)
+    const fallbackPin = String(Math.floor(1000 + Math.random() * 9000))
+    setPin(fallbackPin)
     setIsModalOpen(true)
+    if (token) {
+      try {
+        const generated = await generatePlayerPinFn({
+          data: { sessionToken: token },
+        })
+        if (generated) setPin(generated)
+      } catch {
+        // Fallback already set
+      }
+    }
   }
 
   const openEditModal = (player: Player) => {
@@ -97,6 +129,7 @@ export function AdminPlayersTab() {
     setJerseyNumber(player.jerseyNumber ? String(player.jerseyNumber) : '')
     setPosition(player.position || '')
     setWhatsapp(player.whatsapp || '')
+    setPin(player.legacyPin || '')
     setIsActive(player.isActive)
     setIsModalOpen(true)
   }
@@ -104,6 +137,13 @@ export function AdminPlayersTab() {
   const handleSavePlayer = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim() || !token) return
+
+    const cleanPin = pin.trim()
+    if (cleanPin && (cleanPin.length !== 4 || !/^\d{4}$/.test(cleanPin))) {
+      notify('PIN-ku waa inuu noqdaa 4 lambar (e.g. 1234)', 'danger')
+      return
+    }
+
     setIsSaving(true)
 
     const num = jerseyNumber ? parseInt(jerseyNumber, 10) : null
@@ -119,6 +159,7 @@ export function AdminPlayersTab() {
             jerseyNumber: num,
             position: position.trim() || null,
             whatsapp: whatsapp.trim() || null,
+            legacyPin: cleanPin || null,
             isActive,
           },
         })
@@ -135,6 +176,7 @@ export function AdminPlayersTab() {
             jerseyNumber: num,
             position: position.trim() || null,
             whatsapp: whatsapp.trim() || null,
+            legacyPin: cleanPin || null,
             isActive,
           },
         })
@@ -296,7 +338,11 @@ export function AdminPlayersTab() {
                   </StatusBadge>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-chalk-dim">
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-chalk-dim">
+                  <span className="rounded bg-pitch-deep px-2 py-0.5 border border-gold/40 flex items-center gap-1 font-mono font-bold text-gold">
+                    <KeyRound className="h-3 w-3 text-gold" />
+                    <span>PIN: {player.legacyPin || '---'}</span>
+                  </span>
                   {player.position ? (
                     <span className="rounded bg-surface-raised px-2 py-0.5 border border-club-border">
                       Booska: {player.position}
@@ -397,6 +443,52 @@ export function AdminPlayersTab() {
             />
           </div>
 
+          <div className="rounded-lg border border-gold/30 bg-pitch-deep/70 p-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold">
+                <KeyRound className="h-3.5 w-3.5 text-gold" />
+                <span>Furaha Sirta ah (4-Digit PIN) *</span>
+              </label>
+              <span className="text-[10px] text-chalk-dim">
+                Ciyaartoyga wuxuu ku galayaa PIN-kan
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
+                value={pin}
+                onChange={(e) =>
+                  setPin(e.target.value.replace(/\D/g, '').slice(0, 4))
+                }
+                placeholder="e.g. 1234"
+                className="ui-input font-mono text-center text-lg font-bold tracking-[0.3em] text-gold"
+                required
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                className="shrink-0 gap-1.5 py-2 px-3 text-xs"
+                onClick={handleRegeneratePin}
+                disabled={isGeneratingPin}
+                title="Dhal PIN Cusub oo gaar ah"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${
+                    isGeneratingPin ? 'animate-spin' : ''
+                  }`}
+                />
+                <span>Dib u dhal</span>
+              </Button>
+            </div>
+            <p className="text-[11px] text-chalk-dim m-0">
+              PIN-kani wuxuu u gaar yahay ciyaartoygan. Admin-ku mar kasta wuu
+              arki karaa ama beddeli karaa.
+            </p>
+          </div>
+
           <label className="flex items-center gap-2 pt-1 cursor-pointer">
             <input
               type="checkbox"
@@ -445,6 +537,10 @@ export function AdminPlayersTab() {
                   Direys #{viewingPlayer.player.jerseyNumber ?? 'N/A'} • Booska:{' '}
                   {viewingPlayer.player.position ?? 'N/A'}
                 </span>
+                <div className="mt-1.5 flex items-center gap-1.5 rounded border border-gold/40 bg-pitch-deep px-2 py-0.5 w-fit font-mono text-xs font-bold text-gold">
+                  <KeyRound className="h-3 w-3 text-gold" />
+                  <span>PIN: {viewingPlayer.player.legacyPin || '---'}</span>
+                </div>
               </div>
               <StatusBadge
                 tone={viewingPlayer.player.isActive ? 'success' : 'danger'}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
+  Lock,
   LogIn,
   RefreshCw,
   Shield,
@@ -49,6 +50,7 @@ export function LoginView() {
   const [rosterError, setRosterError] = useState('')
   const [playerLoginBusy, setPlayerLoginBusy] = useState(false)
   const [playerError, setPlayerError] = useState('')
+  const [playerPin, setPlayerPin] = useState('')
 
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('')
@@ -95,12 +97,20 @@ export function LoginView() {
 
   const handlePlayerLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedPlayerId) return
+    const cleanPin = playerPin.trim()
+    if (!selectedPlayerId) {
+      setPlayerError('Fadlan dooro magacaaga ciyaartoyga.')
+      return
+    }
+    if (cleanPin.length !== 4) {
+      setPlayerError('Fadlan geli furahaaga sirta ah (4-digit PIN).')
+      return
+    }
     setPlayerError('')
     setPlayerLoginBusy(true)
 
     try {
-      await loginPlayer(selectedPlayerId)
+      await loginPlayer(selectedPlayerId, cleanPin)
     } catch (err: any) {
       setPlayerError(
         err?.message || 'Qalad ayaa dhacay intii lagu jiray soo galitaanka',
@@ -250,7 +260,11 @@ export function LoginView() {
                       <button
                         key={player.id}
                         type="button"
-                        onClick={() => setSelectedPlayerId(player.id)}
+                        onClick={() => {
+                          setSelectedPlayerId(player.id)
+                          setPlayerPin('')
+                          setPlayerError('')
+                        }}
                         className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left transition-colors cursor-pointer ${
                           isSelected
                             ? 'bg-gold/20 border border-gold text-chalk'
@@ -287,6 +301,45 @@ export function LoginView() {
               )}
             </div>
 
+            {selectedPlayerId ? (
+              <div className="rounded-lg border border-gold/30 bg-pitch-deep/90 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="player-pin-input"
+                    className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold"
+                  >
+                    <Lock className="h-3.5 w-3.5 text-gold" />
+                    <span>Furaha Sirta ah (4-Digit PIN)</span>
+                  </label>
+                  <span className="text-[10px] font-medium text-chalk-dim">
+                    4 Lambar
+                  </span>
+                </div>
+                <input
+                  id="player-pin-input"
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  autoComplete="current-password"
+                  value={playerPin}
+                  onChange={(e) => {
+                    const cleaned = e.target.value
+                      .replace(/\D/g, '')
+                      .slice(0, 4)
+                    setPlayerPin(cleaned)
+                    if (playerError) setPlayerError('')
+                  }}
+                  placeholder="••••"
+                  className="ui-input text-center font-mono text-xl tracking-[0.4em] placeholder:tracking-widest"
+                  required
+                />
+                <p className="text-[11px] text-chalk-dim text-center m-0">
+                  Haddii aad hilmaantay PIN-kaaga, weydii maamulaha kooxda.
+                </p>
+              </div>
+            ) : null}
+
             {playerError ? (
               <p className="text-xs font-bold text-danger">{playerError}</p>
             ) : null}
@@ -295,7 +348,12 @@ export function LoginView() {
               type="submit"
               variant="primary"
               busy={playerLoginBusy}
-              disabled={!selectedPlayerId || playerLoginBusy || isLoadingRoster}
+              disabled={
+                !selectedPlayerId ||
+                playerPin.trim().length !== 4 ||
+                playerLoginBusy ||
+                isLoadingRoster
+              }
               className="w-full justify-center py-3 text-base shadow-lg"
             >
               <LogIn className="h-4 w-4" />

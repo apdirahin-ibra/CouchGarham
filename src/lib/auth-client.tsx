@@ -86,8 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [initial.user])
 
-  const loginPlayer = useCallback(async (playerId: string) => {
-    const res = await loginPlayerFn({ data: { playerId } })
+  const loginPlayer = useCallback(async (playerId: string, pin: string) => {
+    const res = await loginPlayerFn({ data: { playerId, pin } })
     setUser(res.actor)
     setToken(res.token)
     if (typeof window !== 'undefined') {

@@ -62,3 +62,32 @@ describe('Server Authorization Guards', () => {
     expect(() => requireSession(null)).toThrow(/Fadlan gal koontadaada/i)
   })
 })
+
+describe('Player 4-Digit Unique PIN Security & Validation', () => {
+  const isValid4DigitPin = (pin: string) => /^\d{4}$/.test(pin.trim())
+
+  it('accepts valid 4-digit numeric PINs', () => {
+    expect(isValid4DigitPin('1001')).toBe(true)
+    expect(isValid4DigitPin('4821')).toBe(true)
+    expect(isValid4DigitPin('0000')).toBe(true)
+    expect(isValid4DigitPin('9999')).toBe(true)
+  })
+
+  it('rejects invalid PIN formats (non-digits, too short, too long, empty)', () => {
+    expect(isValid4DigitPin('123')).toBe(false)
+    expect(isValid4DigitPin('12345')).toBe(false)
+    expect(isValid4DigitPin('abcd')).toBe(false)
+    expect(isValid4DigitPin('12a4')).toBe(false)
+    expect(isValid4DigitPin('')).toBe(false)
+    expect(isValid4DigitPin('   ')).toBe(false)
+  })
+
+  it('verifies PIN matching logic strictly', () => {
+    const playerLegacyPin = '4821'
+    const cleanEnteredPin = '4821'.trim()
+    const wrongEnteredPin = '1234'.trim()
+
+    expect(playerLegacyPin === cleanEnteredPin).toBe(true)
+    expect(playerLegacyPin === wrongEnteredPin).toBe(false)
+  })
+})

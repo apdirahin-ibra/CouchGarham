@@ -42,6 +42,7 @@ import {
 } from './finance.server'
 import {
   createPlayerAdmin,
+  generateUniquePlayerPin,
   getAllPlayersAdmin,
   getPlayerDetailAdmin,
   getRosterForLogin,
@@ -104,11 +105,20 @@ export const loginAdminFn = createServerFn({ method: 'POST' })
   })
 
 export const loginPlayerFn = createServerFn({ method: 'POST' })
-  .validator((data: { playerId: string }) =>
-    z.object({ playerId: z.string().uuid() }).parse(data),
+  .validator((data: { playerId: string; pin: string }) =>
+    z
+      .object({
+        playerId: z.string().uuid(),
+        pin: z
+          .string()
+          .trim()
+          .min(4, 'PIN-ku waa inuu noqdaa 4 lambar')
+          .max(20),
+      })
+      .parse(data),
   )
   .handler(async ({ data }) => {
-    return loginPlayer(data.playerId)
+    return loginPlayer(data.playerId, data.pin)
   })
 
 export const resolveCurrentSessionFn = createServerFn({ method: 'POST' })
@@ -155,6 +165,16 @@ export const getAdminPlayersFn = createServerFn({ method: 'POST' })
     return getAllPlayersAdmin()
   })
 
+export const generatePlayerPinFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string }) =>
+    z.object({ sessionToken: z.string().max(256) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return generateUniquePlayerPin()
+  })
+
 export const createPlayerAdminFn = createServerFn({ method: 'POST' })
   .validator(
     (data: {
@@ -164,6 +184,7 @@ export const createPlayerAdminFn = createServerFn({ method: 'POST' })
       jerseyNumber?: number | null
       position?: string | null
       whatsapp?: string | null
+      legacyPin?: string | null
       isActive?: boolean
     }) =>
       z
@@ -174,6 +195,13 @@ export const createPlayerAdminFn = createServerFn({ method: 'POST' })
           jerseyNumber: z.number().int().min(1).max(99).optional().nullable(),
           position: z.string().trim().max(50).optional().nullable(),
           whatsapp: z.string().trim().max(30).optional().nullable(),
+          legacyPin: z
+            .string()
+            .trim()
+            .length(4, 'PIN-ku waa inuu ahaadaa 4 god')
+            .regex(/^\d{4}$/, 'PIN-ku waa inuu noqdaa 4 lambar')
+            .optional()
+            .nullable(),
           isActive: z.boolean().optional(),
         })
         .parse(data),
@@ -187,6 +215,7 @@ export const createPlayerAdminFn = createServerFn({ method: 'POST' })
       jerseyNumber: data.jerseyNumber,
       position: data.position,
       whatsapp: data.whatsapp,
+      legacyPin: data.legacyPin,
       isActive: data.isActive ?? true,
     })
   })
@@ -201,6 +230,7 @@ export const updatePlayerAdminFn = createServerFn({ method: 'POST' })
       jerseyNumber?: number | null
       position?: string | null
       whatsapp?: string | null
+      legacyPin?: string | null
       isActive?: boolean
     }) =>
       z
@@ -212,6 +242,13 @@ export const updatePlayerAdminFn = createServerFn({ method: 'POST' })
           jerseyNumber: z.number().int().min(1).max(99).optional().nullable(),
           position: z.string().trim().max(50).optional().nullable(),
           whatsapp: z.string().trim().max(30).optional().nullable(),
+          legacyPin: z
+            .string()
+            .trim()
+            .length(4, 'PIN-ku waa inuu ahaadaa 4 god')
+            .regex(/^\d{4}$/, 'PIN-ku waa inuu noqdaa 4 lambar')
+            .optional()
+            .nullable(),
           isActive: z.boolean().optional(),
         })
         .parse(data),

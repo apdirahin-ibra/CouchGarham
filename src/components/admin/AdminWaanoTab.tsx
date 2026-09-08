@@ -142,11 +142,17 @@ export function AdminWaanoTab() {
       const res = await bulkImport100TipsFn({
         data: { sessionToken: token, mode },
       })
-      notify(res.message || '100-ka waano si guul leh ayaa loo soo geliyay!', 'success')
+      notify(
+        res.message || '100-ka waano si guul leh ayaa loo soo geliyay!',
+        'success',
+      )
       setIsBulkModalOpen(false)
       await loadTips()
     } catch (err: any) {
-      notify(err?.message || 'Qalad ayaa dhacay soo gelinta 100-ka waano', 'danger')
+      notify(
+        err?.message || 'Qalad ayaa dhacay soo gelinta 100-ka waano',
+        'danger',
+      )
     } finally {
       setIsImporting(false)
     }
@@ -245,9 +251,12 @@ export function AdminWaanoTab() {
       ) : tipsList.length === 0 ? (
         <div className="rounded-xl border border-club-border bg-surface p-8 text-center space-y-3">
           <Sparkles className="h-8 w-8 text-gold mx-auto" />
-          <h3 className="text-sm font-bold text-chalk">Weli ma jiraan waano la galiyay</h3>
+          <h3 className="text-sm font-bold text-chalk">
+            Weli ma jiraan waano la galiyay
+          </h3>
           <p className="text-xs text-chalk-dim max-w-md mx-auto">
-            Waxaad hal gujin ku soo geli kartaa dhammaan 100-ka waano ee ciyaartoyda ama waxaad ku dari kartaa waano gaar ah.
+            Waxaad hal gujin ku soo geli kartaa dhammaan 100-ka waano ee
+            ciyaartoyda ama waxaad ku dari kartaa waano gaar ah.
           </p>
           <Button
             variant="primary"
@@ -390,7 +399,9 @@ export function AdminWaanoTab() {
               <span>BEST OFFICIAL APP — 100 Waano Ciyaartoyda</span>
             </div>
             <p className="text-xs text-chalk leading-relaxed">
-              Waxaad hal mar keydka ku shubi kartaa dhammaan 100-ka waano iyo talooyin ciyaareed oo dhammaystiran (hurdo, biyo, cunto, anshax, tababar, xushmad, iwm).
+              Waxaad hal mar keydka ku shubi kartaa dhammaan 100-ka waano iyo
+              talooyin ciyaareed oo dhammaystiran (hurdo, biyo, cunto, anshax,
+              tababar, xushmad, iwm).
             </p>
           </div>
 
@@ -406,11 +417,16 @@ export function AdminWaanoTab() {
               className="w-full text-left p-3.5 rounded-xl border border-gold/40 bg-gold/10 hover:bg-gold/20 transition-colors cursor-pointer group"
             >
               <div className="font-bold text-gold text-xs flex items-center justify-between">
-                <span>1. Bedel Dhammaan oo Geli 100-ka Waano (Lagu Talinayo)</span>
-                <span className="text-[0.625rem] uppercase px-1.5 py-0.5 rounded bg-gold/20 text-gold border border-gold/30">Fresh 100</span>
+                <span>
+                  1. Bedel Dhammaan oo Geli 100-ka Waano (Lagu Talinayo)
+                </span>
+                <span className="text-[0.625rem] uppercase px-1.5 py-0.5 rounded bg-gold/20 text-gold border border-gold/30">
+                  Fresh 100
+                </span>
               </div>
               <p className="mt-1 text-[0.6875rem] text-chalk-dim group-hover:text-chalk transition-colors">
-                Waxay tirtireysaa waanadii hore oo waxay soo gelinaysaa 100-ka waano oo nidaamsan min 1 ilaa 100.
+                Waxay tirtireysaa waanadii hore oo waxay soo gelinaysaa 100-ka
+                waano oo nidaamsan min 1 ilaa 100.
               </p>
             </button>
 
@@ -424,7 +440,8 @@ export function AdminWaanoTab() {
                 2. Ku dar kuwa ka dhiman kaliya (Append)
               </div>
               <p className="mt-1 text-[0.6875rem] text-chalk-dim group-hover:text-chalk transition-colors">
-                Kaliya waanooyinka aan weli ku jirin liiska ayaa lagu dari doonaa, kuwa horena waa la deynayaa.
+                Kaliya waanooyinka aan weli ku jirin liiska ayaa lagu dari
+                doonaa, kuwa horena waa la deynayaa.
               </p>
             </button>
           </div>

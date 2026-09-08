@@ -113,7 +113,8 @@ export function PlayerRulesTab() {
             )}
           </div>
           <p className="text-xs text-chalk-dim">
-            Hanaanka, awaamiirta, iyo anshaxa laga rabo xidiga kasta ee Best Academy
+            Hanaanka, awaamiirta, iyo anshaxa laga rabo xidiga kasta ee Best
+            Academy
           </p>
         </div>
 
@@ -194,7 +195,8 @@ export function PlayerRulesTab() {
                   HANAANKA IYO AWAAMIIRTA BEST ACADEMY
                 </h3>
                 <p className="mt-1 text-xs text-gold font-medium">
-                  Shuruudaha iyo anshaxa ay akademiyadu ugu baahantahay ciyaaryahankeeda ❤️
+                  Shuruudaha iyo anshaxa ay akademiyadu ugu baahantahay
+                  ciyaaryahankeeda ❤️
                 </p>
               </div>
             </div>

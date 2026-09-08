@@ -191,9 +191,7 @@ function IndexPage() {
               </div>
             )}
             {visitedPlayerTabs.has('suggestions') && (
-              <div
-                className={playerTab === 'suggestions' ? 'block' : 'hidden'}
-              >
+              <div className={playerTab === 'suggestions' ? 'block' : 'hidden'}>
                 <PlayerSuggestionsTab />
               </div>
             )}

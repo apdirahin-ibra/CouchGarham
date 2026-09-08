@@ -260,10 +260,11 @@ export async function loginAdmin(
 }
 
 /**
- * Passwordless Player Login: selects active player from roster.
+ * Player Login with 4-Digit Unique PIN verification.
  */
 export async function loginPlayer(
   playerId: string,
+  pin: string,
   context?: { userAgent?: string; ipAddress?: string },
 ): Promise<{ token: string; actor: AuthenticatedActor }> {
   const db = getDatabase()
@@ -281,6 +282,26 @@ export async function loginPlayer(
 
   if (!player.isActive) {
     throw new Error('Ciyaartoygan hadda ma shaqeynayo (Player is deactivated)')
+  }
+
+  // Verify 4-digit PIN
+  const cleanPin = (pin || '').trim()
+  if (!cleanPin) {
+    throw new Error('Fadlan geli furahaaga sirta ah (PIN 4-lambar ah)')
+  }
+
+  if (player.legacyPin) {
+    if (player.legacyPin.trim() !== cleanPin) {
+      throw new Error(
+        'Furaha sirta ah (PIN) waa khalad! Fadlan hubi ama la xiriir macallinka haddii aad hilmaantay.',
+      )
+    }
+  } else {
+    // If no PIN was previously set, save this verified PIN for the player
+    await db
+      .update(players)
+      .set({ legacyPin: cleanPin })
+      .where(eq(players.id, playerId))
   }
 
   // Ensure an auth_user record exists for this player

@@ -6,7 +6,7 @@ export type AuthContextValue = {
   user: AuthenticatedActor | null
   token: string | null
   isLoading: boolean
-  loginPlayer: (playerId: string) => Promise<void>
+  loginPlayer: (playerId: string, pin: string) => Promise<void>
   loginAdmin: (username: string, pass: string) => Promise<void>
   logout: () => Promise<void>
 }

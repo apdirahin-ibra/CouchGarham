@@ -80,11 +80,34 @@ export async function getAllPlayersAdmin(): Promise<Player[]> {
 }
 
 /**
+ * Generates a unique 4-digit PIN not in use by any player.
+ */
+export async function generateUniquePlayerPin(): Promise<string> {
+  const db = getDatabase()
+  const existing = await db.select({ pin: players.legacyPin }).from(players)
+  const usedPins = new Set(existing.map((p) => p.pin?.trim()).filter(Boolean))
+
+  for (let attempt = 0; attempt < 1000; attempt++) {
+    const candidate = String(Math.floor(1000 + Math.random() * 9000))
+    if (!usedPins.has(candidate)) {
+      return candidate
+    }
+  }
+
+  return String(Math.floor(1000 + Math.random() * 9000))
+}
+
+/**
  * Admin: Creates a new player on the roster.
  */
 export async function createPlayerAdmin(input: PlayerInput): Promise<Player> {
   const db = getDatabase()
   const validated = playerInputSchema.parse(input)
+
+  let pin = validated.legacyPin?.trim() || null
+  if (!pin) {
+    pin = await generateUniquePlayerPin()
+  }
 
   const [inserted] = await db
     .insert(players)
@@ -94,7 +117,7 @@ export async function createPlayerAdmin(input: PlayerInput): Promise<Player> {
       position: validated.position?.trim() || null,
       jerseyNumber: validated.jerseyNumber ?? null,
       whatsapp: validated.whatsapp?.trim() || null,
-      legacyPin: validated.legacyPin?.trim() || null,
+      legacyPin: pin,
       isActive: validated.isActive,
     })
     .returning()

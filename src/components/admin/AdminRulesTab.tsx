@@ -487,7 +487,8 @@ export function AdminRulesTab() {
 
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-1">
                 <span className="text-[0.6875rem] text-chalk-dim">
-                  Wadarta: {rulesText.length} xaraf {rulesText ? '• ~40 Qodob oo sharci ah' : ''}
+                  Wadarta: {rulesText.length} xaraf{' '}
+                  {rulesText ? '• ~40 Qodob oo sharci ah' : ''}
                 </span>
 
                 <Button
@@ -516,7 +517,9 @@ export function AdminRulesTab() {
                   <span>HANAANKA IYO AWAAMIIRTA BEST ACADEMY</span>
                 </div>
                 <p className="text-xs text-chalk leading-relaxed">
-                  Waxaad hal mar soo gelin kartaa dhammaan 40-ka qodob ee rasmiga ah ee Best Academy (Waqtiga, Bacaadka, Salaadda, Agabka, Jadwalka 4-ta maalin, Aalamiitooyinka, Anshaxa, iwm).
+                  Waxaad hal mar soo gelin kartaa dhammaan 40-ka qodob ee
+                  rasmiga ah ee Best Academy (Waqtiga, Bacaadka, Salaadda,
+                  Agabka, Jadwalka 4-ta maalin, Aalamiitooyinka, Anshaxa, iwm).
                 </p>
               </div>
 
@@ -534,7 +537,8 @@ export function AdminRulesTab() {
                     </span>
                   </div>
                   <p className="mt-1 text-[0.6875rem] text-chalk-dim group-hover:text-chalk transition-colors">
-                    Waxay si toos ah database-ka ugu keydinaysaa 40-ka qodob ee shuruucda Best Academy.
+                    Waxay si toos ah database-ka ugu keydinaysaa 40-ka qodob ee
+                    shuruucda Best Academy.
                   </p>
                 </button>
 
@@ -548,7 +552,8 @@ export function AdminRulesTab() {
                     2. Soo Geli Sanduuqa Kaliya (Dib u eegis)
                   </div>
                   <p className="mt-1 text-[0.6875rem] text-chalk-dim group-hover:text-chalk transition-colors">
-                    Waxay qoraalka soo gelinaysaa sanduuqa qoraalka si aad wax uga beddesho ka hor inta aadan keydin.
+                    Waxay qoraalka soo gelinaysaa sanduuqa qoraalka si aad wax
+                    uga beddesho ka hor inta aadan keydin.
                   </p>
                 </button>
               </div>
