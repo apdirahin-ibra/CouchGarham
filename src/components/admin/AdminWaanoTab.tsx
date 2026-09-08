@@ -141,14 +141,14 @@ export function AdminWaanoTab() {
                 </div>
               </div>
 
-              <Button
-                variant="ghost"
-                className="h-8 w-8 p-0 shrink-0 text-chalk-dim hover:text-danger"
+              <button
+                type="button"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-danger/40 bg-danger/10 text-danger hover:bg-danger/20 hover:border-danger transition-colors cursor-pointer"
                 onClick={() => handleDeleteTip(tip.id)}
                 title="Tirtir waanada"
               >
                 <Trash2 className="h-4 w-4" />
-              </Button>
+              </button>
             </TicketCard>
           ))}
         </div>

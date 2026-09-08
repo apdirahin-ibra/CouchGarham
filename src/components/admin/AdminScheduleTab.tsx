@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
-  Edit2,
+  Edit,
   MapPin,
   Plus,
   RefreshCw,
@@ -222,23 +222,23 @@ export function AdminScheduleTab() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      className="h-8 w-8 p-0"
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
                       onClick={() => openEditModal(schedule)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-gold/40 bg-gold/10 text-gold hover:bg-gold/20 hover:border-gold transition-colors cursor-pointer"
                       title="Wax ka beddel"
                     >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="h-8 w-8 p-0 text-danger hover:text-danger"
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleDeleteSchedule(schedule.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-danger/40 bg-danger/10 text-danger hover:bg-danger/20 hover:border-danger transition-colors cursor-pointer"
                       title="Tirtir"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
 

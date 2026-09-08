@@ -206,14 +206,14 @@ export function AdminFinanceTab() {
                   {item.type === 'income' ? '+' : '-'}${item.amount.toFixed(2)}
                 </strong>
 
-                <Button
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-chalk-dim hover:text-danger"
+                <button
+                  type="button"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-danger/40 bg-danger/10 text-danger hover:bg-danger/20 hover:border-danger transition-colors cursor-pointer"
                   onClick={() => handleDeleteEntry(item.id)}
                   title="Tirtir"
                 >
                   <Trash2 className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
             </div>
           ))}
