@@ -79,11 +79,8 @@ button {
 }
 
 main {
-  width: min(
-    var(--club-layout-max-width),
-    calc(100% - (2 * var(--club-layout-gutter)))
-  );
-  margin: 4rem auto;
+  width: 100%;
+  margin: 0 auto;
 }
 
 /* Shared UI primitives */
@@ -123,8 +120,7 @@ main {
   gap: 0.2rem;
 }
 
-.ui-section-eyebrow,
-.ui-stat-label {
+.ui-section-eyebrow {
   color: var(--club-color-gold);
   font-size: 0.75rem;
   font-weight: 700;
@@ -141,26 +137,74 @@ main {
 }
 
 .ui-stat-tile {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   min-width: 0;
-  gap: 0.25rem;
-  padding: 0.875rem;
+  gap: 0.2rem;
+  padding: 0.625rem 0.35rem;
   background: var(--club-color-surface-raised);
   border: 1px solid var(--club-color-border);
   border-radius: 0.625rem;
 }
 
+@media (min-width: 640px) {
+  .ui-stat-tile {
+    padding: 0.875rem;
+    align-items: flex-start;
+    text-align: left;
+    gap: 0.25rem;
+  }
+}
+
+.ui-stat-label {
+  color: var(--club-color-gold);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+@media (min-width: 640px) {
+  .ui-stat-label {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+  }
+}
+
 .ui-stat-value {
   color: var(--club-color-chalk);
   font-family: var(--club-font-display);
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   line-height: 1;
+  display: block;
+}
+
+@media (min-width: 640px) {
+  .ui-stat-value {
+    font-size: 1.75rem;
+  }
 }
 
 .ui-stat-detail,
 .ui-field-description {
   color: var(--club-color-chalk-dim);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
+  display: block;
+}
+
+@media (min-width: 640px) {
+  .ui-stat-detail,
+  .ui-field-description {
+    font-size: 0.8125rem;
+  }
 }
 
 .ui-field {

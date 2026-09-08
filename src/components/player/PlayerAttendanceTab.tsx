@@ -120,28 +120,28 @@ export function PlayerAttendanceTab() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-xl border border-success/30 bg-surface-raised p-3">
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-3 text-center">
+        <div className="rounded-xl border border-success/30 bg-surface-raised p-2.5 sm:p-3 flex flex-col items-center justify-center">
           <span className="block text-xs font-bold uppercase text-success">
             Xadir
           </span>
-          <strong className="font-display text-2xl font-bold text-chalk">
+          <strong className="block my-1 font-display text-2xl font-bold text-chalk leading-none">
             {totals.xadir}
           </strong>
         </div>
-        <div className="rounded-xl border border-danger/30 bg-surface-raised p-3">
+        <div className="rounded-xl border border-danger/30 bg-surface-raised p-2.5 sm:p-3 flex flex-col items-center justify-center">
           <span className="block text-xs font-bold uppercase text-danger">
             Maqan
           </span>
-          <strong className="font-display text-2xl font-bold text-chalk">
+          <strong className="block my-1 font-display text-2xl font-bold text-chalk leading-none">
             {totals.maqan}
           </strong>
         </div>
-        <div className="rounded-xl border border-warning/30 bg-surface-raised p-3">
+        <div className="rounded-xl border border-warning/30 bg-surface-raised p-2.5 sm:p-3 flex flex-col items-center justify-center">
           <span className="block text-xs font-bold uppercase text-warning">
             Daahay
           </span>
-          <strong className="font-display text-2xl font-bold text-chalk">
+          <strong className="block my-1 font-display text-2xl font-bold text-chalk leading-none">
             {totals.daahay}
           </strong>
         </div>

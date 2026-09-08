@@ -185,36 +185,36 @@ export function AdminAttendanceTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 text-center">
-        <div className="rounded-lg border border-success/40 bg-surface p-2">
+      <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center">
+        <div className="rounded-lg border border-success/40 bg-surface p-1.5 sm:p-2 flex flex-col items-center justify-center">
           <span className="block text-[0.625rem] font-bold uppercase text-success">
             Xadir
           </span>
-          <strong className="font-display text-xl text-chalk">
+          <strong className="block my-0.5 font-display text-lg sm:text-xl text-chalk leading-none">
             {summary.xadir}
           </strong>
         </div>
-        <div className="rounded-lg border border-danger/40 bg-surface p-2">
+        <div className="rounded-lg border border-danger/40 bg-surface p-1.5 sm:p-2 flex flex-col items-center justify-center">
           <span className="block text-[0.625rem] font-bold uppercase text-danger">
             Maqan
           </span>
-          <strong className="font-display text-xl text-chalk">
+          <strong className="block my-0.5 font-display text-lg sm:text-xl text-chalk leading-none">
             {summary.maqan}
           </strong>
         </div>
-        <div className="rounded-lg border border-warning/40 bg-surface p-2">
+        <div className="rounded-lg border border-warning/40 bg-surface p-1.5 sm:p-2 flex flex-col items-center justify-center">
           <span className="block text-[0.625rem] font-bold uppercase text-warning">
             Daahay
           </span>
-          <strong className="font-display text-xl text-chalk">
+          <strong className="block my-0.5 font-display text-lg sm:text-xl text-chalk leading-none">
             {summary.daahay}
           </strong>
         </div>
-        <div className="rounded-lg border border-club-border bg-surface p-2">
+        <div className="rounded-lg border border-club-border bg-surface p-1.5 sm:p-2 flex flex-col items-center justify-center">
           <span className="block text-[0.625rem] font-bold uppercase text-chalk-dim">
             Haray
           </span>
-          <strong className="font-display text-xl text-chalk">
+          <strong className="block my-0.5 font-display text-lg sm:text-xl text-chalk leading-none">
             {summary.unrecorded}
           </strong>
         </div>

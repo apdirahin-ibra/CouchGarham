@@ -153,10 +153,10 @@ export function PlayerDashboardTab({
         </span>
       </div>
 
-      <TicketCard className="border-gold/40 p-4 space-y-3">
-        <div className="flex items-center justify-between">
+      <TicketCard className="border-gold/40 p-3.5 sm:p-4 space-y-3">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-gold">
-            <Bell className="h-4 w-4" />
+            <Bell className="h-4 w-4 shrink-0" />
             <SectionTitle eyebrow="OGEYSIISKA MACALLINKA" as="h3">
               Ogeysiiska Kooxda
             </SectionTitle>
@@ -165,7 +165,7 @@ export function PlayerDashboardTab({
           {announcementAudioPath ? (
             <Button
               variant="secondary"
-              className="h-8 px-2.5 text-xs gap-1.5 text-gold border-gold/40 hover:bg-gold/20"
+              className="h-8 px-2.5 text-xs gap-1.5 self-start sm:self-auto text-gold border-gold/40 hover:bg-gold/20"
               onClick={handleToggleVoice}
             >
               {isPlayingAudio ? (
@@ -176,7 +176,7 @@ export function PlayerDashboardTab({
               <span>{isPlayingAudio ? 'Jooji Codka' : 'Dhageyso Codka'}</span>
             </Button>
           ) : (
-            <span className="flex items-center gap-1 text-[0.6875rem] text-chalk-dim">
+            <span className="flex items-center gap-1 text-[0.6875rem] text-chalk-dim self-start sm:self-auto">
               <Volume2 className="h-3.5 w-3.5" />
               <span>Cod ma jiro</span>
             </span>
@@ -278,39 +278,35 @@ export function PlayerDashboardTab({
           Xogtaada Bishan ({currentMonth})
         </SectionTitle>
 
-        <div className="mt-3 grid grid-cols-3 gap-2.5">
-          <StatTile label="Goolashaada" value={stats.goals} detail="Bishan" />
-          <StatTile label="Caawintaada" value={stats.assists} detail="Bishan" />
-          <StatTile
-            label="Qaladaadkaaga"
-            value={stats.errors}
-            detail="Bishan"
-          />
+        <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-2.5">
+          <StatTile label="Goolal" value={stats.goals} detail="Bishan" />
+          <StatTile label="Caawin" value={stats.assists} detail="Bishan" />
+          <StatTile label="Qaladaad" value={stats.errors} detail="Bishan" />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <TicketCard className="p-3.5 text-center">
-          <span className="block text-[0.6875rem] font-bold uppercase text-gold">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+        <TicketCard className="p-3 sm:p-4 text-center flex flex-col items-center justify-center">
+          <span className="block text-[0.6875rem] font-bold uppercase tracking-wider text-gold">
             Xaadiriska Bishan
           </span>
-          <strong className="font-display text-2xl font-bold text-chalk">
+          <strong className="block my-1 font-display text-2xl sm:text-3xl font-bold text-chalk leading-none">
             {stats.xadirCount}
           </strong>
-          <span className="text-[0.625rem] text-success">
+          <span className="block text-[0.6875rem] text-success font-semibold leading-tight">
             Kulamadii aad timid
           </span>
         </TicketCard>
 
-        <TicketCard className="p-3.5 text-center">
-          <span className="block text-[0.6875rem] font-bold uppercase text-gold">
+        <TicketCard className="p-3 sm:p-4 text-center flex flex-col items-center justify-center">
+          <span className="block text-[0.6875rem] font-bold uppercase tracking-wider text-gold">
             Fasaxa Bishan
           </span>
-          <strong className="font-display text-2xl font-bold text-chalk">
+          <strong className="block my-1 font-display text-2xl sm:text-3xl font-bold text-chalk leading-none">
             {leaveUsedThisMonth} / {leaveMaxPerMonth}
           </strong>
-          <span className="text-[0.625rem] text-chalk-dim">
-            {leaveMaxPerMonth - leaveUsedThisMonth} maalmood ayaa kuu haray
+          <span className="block text-[0.6875rem] text-chalk-dim font-medium leading-tight">
+            {Math.max(0, leaveMaxPerMonth - leaveUsedThisMonth)} maalmood haray
           </span>
         </TicketCard>
       </div>

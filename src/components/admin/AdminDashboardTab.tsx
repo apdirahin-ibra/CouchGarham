@@ -185,20 +185,20 @@ export function AdminDashboardTab({
           Koobka Xaadiriska Maanta
         </SectionTitle>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <button
             type="button"
             onClick={() => setActiveListModal('xadir')}
-            className="flex flex-col items-center justify-center rounded-lg border border-success/30 bg-surface-raised p-3 text-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+            className="flex flex-col items-center justify-center rounded-lg border border-success/30 bg-surface-raised p-2.5 sm:p-3 text-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
           >
             <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-success">
               <CheckCircle className="h-3.5 w-3.5" />
               Xadir
             </span>
-            <strong className="font-display text-2xl font-bold text-chalk">
+            <strong className="block my-1 font-display text-2xl font-bold text-chalk leading-none">
               {attendanceCounts.xadir}
             </strong>
-            <span className="text-[0.6875rem] text-chalk-dim">
+            <span className="block text-[0.6875rem] text-chalk-dim">
               Guji si aad u aragto
             </span>
           </button>
@@ -206,16 +206,16 @@ export function AdminDashboardTab({
           <button
             type="button"
             onClick={() => setActiveListModal('maqan')}
-            className="flex flex-col items-center justify-center rounded-lg border border-danger/30 bg-surface-raised p-3 text-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+            className="flex flex-col items-center justify-center rounded-lg border border-danger/30 bg-surface-raised p-2.5 sm:p-3 text-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
           >
             <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-danger">
               <XCircle className="h-3.5 w-3.5" />
               Maqan
             </span>
-            <strong className="font-display text-2xl font-bold text-chalk">
+            <strong className="block my-1 font-display text-2xl font-bold text-chalk leading-none">
               {attendanceCounts.maqan}
             </strong>
-            <span className="text-[0.6875rem] text-chalk-dim">
+            <span className="block text-[0.6875rem] text-chalk-dim">
               Guji si aad u aragto
             </span>
           </button>
@@ -223,16 +223,16 @@ export function AdminDashboardTab({
           <button
             type="button"
             onClick={() => setActiveListModal('daahay')}
-            className="flex flex-col items-center justify-center rounded-lg border border-warning/30 bg-surface-raised p-3 text-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+            className="flex flex-col items-center justify-center rounded-lg border border-warning/30 bg-surface-raised p-2.5 sm:p-3 text-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
           >
             <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-warning">
               <Clock className="h-3.5 w-3.5" />
               Daahay
             </span>
-            <strong className="font-display text-2xl font-bold text-chalk">
+            <strong className="block my-1 font-display text-2xl font-bold text-chalk leading-none">
               {attendanceCounts.daahay}
             </strong>
-            <span className="text-[0.6875rem] text-chalk-dim">
+            <span className="block text-[0.6875rem] text-chalk-dim">
               Guji si aad u aragto
             </span>
           </button>
@@ -240,16 +240,16 @@ export function AdminDashboardTab({
           <button
             type="button"
             onClick={() => setActiveListModal('unrecorded')}
-            className="flex flex-col items-center justify-center rounded-lg border border-club-border bg-surface-raised p-3 text-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+            className="flex flex-col items-center justify-center rounded-lg border border-club-border bg-surface-raised p-2.5 sm:p-3 text-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
           >
             <span className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-chalk-dim">
               <AlertCircle className="h-3.5 w-3.5" />
               Aan La Qaadin
             </span>
-            <strong className="font-display text-2xl font-bold text-chalk">
+            <strong className="block my-1 font-display text-2xl font-bold text-chalk leading-none">
               {attendanceCounts.unrecorded}
             </strong>
-            <span className="text-[0.6875rem] text-chalk-dim">
+            <span className="block text-[0.6875rem] text-chalk-dim">
               Guji si aad u aragto
             </span>
           </button>
@@ -271,19 +271,19 @@ export function AdminDashboardTab({
           Wadarta Bishan ({currentMonth})
         </SectionTitle>
 
-        <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
           <StatTile
-            label="Goolasha Kooxda"
+            label="Goolasha"
             value={monthTotals.goals}
             detail="Bishan"
           />
           <StatTile
-            label="Caawinta (Assists)"
+            label="Caawinta"
             value={monthTotals.assists}
             detail="Bishan"
           />
           <StatTile
-            label="Qaladaadka (Errors)"
+            label="Qaladaadka"
             value={monthTotals.errors}
             detail="Bishan"
           />
