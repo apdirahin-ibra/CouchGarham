@@ -357,7 +357,7 @@ export function AdminPlayersTab() {
       >
         <form onSubmit={handleSavePlayer} className="space-y-3.5">
           <TextField
-            label="Magaca Ciyaartoyga *"
+            label="Magaca Ciyaartoyga"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Liibaan Axmed"

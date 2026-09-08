@@ -180,19 +180,28 @@ export function Dialog({
 }: DialogProps) {
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
 
   useEffect(() => {
     if (!open) return
 
     const previousFocus = document.activeElement as HTMLElement | null
     const dialog = dialogRef.current
-    const focusable = dialog?.querySelector<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-    )
-    focusable?.focus()
+
+    // Only focus the first focusable element if focus is not already inside the dialog
+    if (!dialog?.contains(document.activeElement)) {
+      const focusable = dialog?.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      )
+      focusable?.focus()
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') onCloseRef.current()
     }
     document.addEventListener('keydown', handleKeyDown)
 
@@ -200,7 +209,7 @@ export function Dialog({
       document.removeEventListener('keydown', handleKeyDown)
       previousFocus?.focus()
     }
-  }, [onClose, open])
+  }, [open])
 
   if (!open) return null
 
