@@ -8,6 +8,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Trash2,
   UserCheck,
   UserX,
 } from 'lucide-react'
@@ -15,6 +16,7 @@ import {
 import { useAuth } from '../../lib/auth-client'
 import {
   createPlayerAdminFn,
+  deletePlayerAdminFn,
   generatePlayerPinFn,
   getAdminPlayersFn,
   getPlayerDetailAdminFn,
@@ -65,6 +67,31 @@ export function AdminPlayersTab() {
   const [isSaving, setIsSaving] = useState(false)
 
   const [viewingPlayer, setViewingPlayer] = useState<any>(null)
+  const [playerToDelete, setPlayerToDelete] = useState<Player | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleConfirmDelete = async () => {
+    if (!playerToDelete || !token) return
+    setIsDeleting(true)
+    try {
+      await deletePlayerAdminFn({
+        data: { sessionToken: token, id: playerToDelete.id },
+      })
+      setPlayers((current) => current.filter((p) => p.id !== playerToDelete.id))
+      notify(
+        `Ciyaartoyga ${playerToDelete.name} si buuxda ayaa looga tirtiray database-ka!`,
+        'success',
+      )
+      setPlayerToDelete(null)
+    } catch (err: any) {
+      notify(
+        err?.message || 'Qalad ayaa dhacay tirtirista ciyaartoyga',
+        'danger',
+      )
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const loadPlayers = useCallback(async () => {
     if (!token) return
@@ -357,36 +384,48 @@ export function AdminPlayersTab() {
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-end gap-2 border-t border-club-border pt-3">
+              <div className="mt-4 flex flex-wrap items-center justify-end gap-1.5 sm:gap-2 border-t border-club-border pt-3">
                 <Button
                   variant="ghost"
-                  className="text-xs py-1 px-2.5 h-8"
+                  className="text-xs py-1 px-2 sm:px-2.5 h-8"
                   onClick={() => handleViewDetail(player)}
+                  title="Daawo faahfaahinta ciyaartoygan"
                 >
                   <Eye className="h-3.5 w-3.5" />
                   <span>Faahfaahin</span>
                 </Button>
                 <Button
                   variant="secondary"
-                  className="text-xs py-1 px-2.5 h-8"
+                  className="text-xs py-1 px-2 sm:px-2.5 h-8"
                   onClick={() => openEditModal(player)}
+                  title="Wax ka beddel ciyaartoygan"
                 >
                   <Edit className="h-3.5 w-3.5" />
                   <span>Wax Ka Beddel</span>
                 </Button>
                 <Button
-                  variant={player.isActive ? 'danger' : 'secondary'}
+                  variant={player.isActive ? 'secondary' : 'primary'}
                   className="text-xs py-1 px-2 h-8"
                   onClick={() => togglePlayerActive(player.id, player.isActive)}
                   title={
-                    player.isActive ? 'Jooji ciyaartoygan' : 'Dib u howlgeli'
+                    player.isActive
+                      ? 'Jooji ciyaartoygan (Deactivate)'
+                      : 'Dib u howlgeli (Reactivate)'
                   }
                 >
                   {player.isActive ? (
-                    <UserX className="h-3.5 w-3.5" />
+                    <UserX className="h-3.5 w-3.5 text-warning" />
                   ) : (
-                    <UserCheck className="h-3.5 w-3.5" />
+                    <UserCheck className="h-3.5 w-3.5 text-success" />
                   )}
+                </Button>
+                <Button
+                  variant="danger"
+                  className="text-xs py-1 px-2 h-8 hover:bg-danger"
+                  onClick={() => setPlayerToDelete(player)}
+                  title={`Tirtir ${player.name} database-ka (Delete player)`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </TicketCard>
@@ -582,6 +621,87 @@ export function AdminPlayersTab() {
                 onClick={() => setViewingPlayer(null)}
               >
                 Xir
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Dialog>
+
+      <Dialog
+        open={Boolean(playerToDelete)}
+        onClose={() => {
+          if (!isDeleting) setPlayerToDelete(null)
+        }}
+        title="Tirtir Ciyaartoyga Database-ka"
+      >
+        {playerToDelete ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-danger/40 bg-danger/10 p-3.5 text-sm text-chalk">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="h-5 w-5 text-danger shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <strong className="block text-chalk font-semibold">
+                    Ma hubtaa inaad rabto inaad tirtirto {playerToDelete.name}?
+                  </strong>
+                  <p className="text-xs text-muted leading-relaxed">
+                    Falkaani dib looma noqon karo. Ciyaartoygan, dhammaan
+                    diiwaankiisa xaadiriska, codsiyadiisa, PIN-kiisa, iyo
+                    xogtiisa oo dhan waxaa si joogto ah looga tirtiri doonaa
+                    database-ka.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded border border-club-border bg-pitch-deep p-3 text-xs space-y-1">
+              <div className="text-muted">
+                Magaca:{' '}
+                <span className="text-chalk font-semibold">
+                  {playerToDelete.name}
+                </span>
+                {playerToDelete.nickname ? ` (${playerToDelete.nickname})` : ''}
+              </div>
+              <div className="text-muted">
+                Direyska:{' '}
+                <span className="text-gold font-mono font-bold">
+                  #{playerToDelete.jerseyNumber ?? 'N/A'}
+                </span>
+                {playerToDelete.position
+                  ? ` • Booska: ${playerToDelete.position}`
+                  : ''}
+              </div>
+              {playerToDelete.legacyPin ? (
+                <div className="text-muted">
+                  PIN-ka Hadda:{' '}
+                  <span className="text-gold font-mono font-bold">
+                    {playerToDelete.legacyPin}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                variant="ghost"
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setPlayerToDelete(null)}
+              >
+                Iska Daay
+              </Button>
+              <Button
+                variant="danger"
+                type="button"
+                busy={isDeleting}
+                onClick={handleConfirmDelete}
+                className="gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>
+                  {isDeleting
+                    ? 'Waa la tirtirayaa...'
+                    : 'Haa, Tirtir Database-ka'}
+                </span>
               </Button>
             </div>
           </div>

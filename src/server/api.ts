@@ -42,6 +42,7 @@ import {
 } from './finance.server'
 import {
   createPlayerAdmin,
+  deletePlayerAdmin,
   generateUniquePlayerPin,
   getAllPlayersAdmin,
   getPlayerDetailAdmin,
@@ -273,6 +274,21 @@ export const togglePlayerActiveAdminFn = createServerFn({ method: 'POST' })
     const actor = await resolveActorFromToken(data.sessionToken)
     requireAdmin(actor)
     return togglePlayerActiveAdmin(data.id, data.isActive)
+  })
+
+export const deletePlayerAdminFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string; id: string }) =>
+    z
+      .object({
+        sessionToken: z.string().max(256),
+        id: z.string().uuid(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return deletePlayerAdmin(data.id)
   })
 
 export const getPlayerDetailAdminFn = createServerFn({ method: 'POST' })

@@ -7,9 +7,15 @@ import { getDatabase } from '../db/connection.server'
 import {
   attendanceExcuses,
   attendanceRecords,
+  authSessions,
+  authUsers,
+  chatMessages,
+  excuseRequests,
   leaveRequests,
+  loginLogs,
   playerMonthlyStats,
   players,
+  suggestions,
   type Player,
 } from '../db/schema'
 import { getCurrentMonthKey } from '../lib/dates'
@@ -246,4 +252,54 @@ export async function getPlayerDetailAdmin(id: string, monthKey?: string) {
     recentExcuses: excuses,
     recentLeaves: leaves,
   }
+}
+
+/**
+ * Admin: Permanently deletes a player and all associated records from the database.
+ */
+export async function deletePlayerAdmin(
+  id: string,
+): Promise<{ success: boolean; id: string }> {
+  const db = getDatabase()
+
+  const [player] = await db
+    .select({ id: players.id, authUserId: players.authUserId })
+    .from(players)
+    .where(eq(players.id, id))
+    .limit(1)
+
+  if (!player) {
+    throw new Error('Ciyaartoygan lama helin (Player not found)')
+  }
+
+  // Delete all dependent records to ensure clean deletion
+  await db.delete(attendanceRecords).where(eq(attendanceRecords.playerId, id))
+  await db.delete(attendanceExcuses).where(eq(attendanceExcuses.playerId, id))
+  await db.delete(excuseRequests).where(eq(excuseRequests.playerId, id))
+  await db.delete(leaveRequests).where(eq(leaveRequests.playerId, id))
+  await db.delete(suggestions).where(eq(suggestions.playerId, id))
+  await db.delete(playerMonthlyStats).where(eq(playerMonthlyStats.playerId, id))
+
+  // Nullify references in chat and logs so chat history remains readable with snapshot names
+  await db
+    .update(chatMessages)
+    .set({ playerId: null })
+    .where(eq(chatMessages.playerId, id))
+  await db
+    .update(loginLogs)
+    .set({ playerId: null })
+    .where(eq(loginLogs.playerId, id))
+
+  // Nullify or delete sessions
+  await db.delete(authSessions).where(eq(authSessions.playerId, id))
+
+  // Delete player
+  await db.delete(players).where(eq(players.id, id))
+
+  // If there was an associated authUser, clean it up
+  if (player.authUserId) {
+    await db.delete(authUsers).where(eq(authUsers.id, player.authUserId))
+  }
+
+  return { success: true, id }
 }
