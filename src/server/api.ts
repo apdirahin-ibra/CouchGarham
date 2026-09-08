@@ -31,6 +31,7 @@ import {
   getTeamDirectory,
   getTips,
   postChatMessage,
+  resetToOfficialClubRules,
   updateClubSettings,
   updateTip,
 } from './content.server'
@@ -898,7 +899,7 @@ export const updateClubSettingsFn = createServerFn({ method: 'POST' })
       z
         .object({
           sessionToken: z.string().max(256),
-          rulesText: z.string().max(5000).optional(),
+          rulesText: z.string().max(20000).optional(),
           announcementText: z.string().max(2000).optional(),
           announcementAudioPath: z.string().max(1000).optional().nullable(),
         })
@@ -908,6 +909,16 @@ export const updateClubSettingsFn = createServerFn({ method: 'POST' })
     const actor = await resolveActorFromToken(data.sessionToken)
     requireAdmin(actor)
     return updateClubSettings(data)
+  })
+
+export const resetOfficialClubRulesFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string }) =>
+    z.object({ sessionToken: z.string().max(256) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return resetToOfficialClubRules()
   })
 
 /* ==================== PLAYER PRIVATE ACTIONS ==================== */

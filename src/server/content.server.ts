@@ -27,6 +27,7 @@ import { getWhatsAppUrl } from '../lib/whatsapp'
 import { getAttendanceForDate } from './attendance.server'
 import { getActiveRoster } from './players.server'
 import { getPlayerLeaves, getRequestsInboxAdmin } from './requests.server'
+import { OFFICIAL_CLUB_RULES } from '../data/rules-data'
 import { OFFICIAL_100_TIPS } from '../data/tips-data'
 import { getPlayerMonthlyStats } from './stats.server'
 import { resolveStorageUrl, VOICE_BUCKET } from './storage.server'
@@ -180,8 +181,7 @@ export async function getClubSettings(): Promise<ClubSettings> {
       .insert(clubSettings)
       .values({
         id: 'default',
-        rulesText:
-          '1. Ilaali waqtiga tababarka iyo kulamada.\n2. Ixtiraam maamulka iyo asxaabta kooxda.\n3. Haysashada direyska iyo agabka kooxda waa muhiim.',
+        rulesText: OFFICIAL_CLUB_RULES,
         announcementText:
           'Kusoo dhowaada Best Official App. Dhammaan ciyaartooyda waa inay la socdaan jadwalka iyo xaadiriska.',
       })
@@ -220,11 +220,16 @@ export async function updateClubSettings(input: {
       ...(input.adminWhatsapp !== undefined
         ? { adminWhatsapp: input.adminWhatsapp }
         : {}),
+      updatedAt: new Date(),
     })
     .where(eq(clubSettings.id, 'default'))
     .returning()
 
   return updated
+}
+
+export async function resetToOfficialClubRules(): Promise<ClubSettings> {
+  return updateClubSettings({ rulesText: OFFICIAL_CLUB_RULES })
 }
 
 /* ==================== GALLERY (SAWIRO) ==================== */

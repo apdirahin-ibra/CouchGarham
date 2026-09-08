@@ -7,19 +7,22 @@ import {
   Play,
   RefreshCw,
   Save,
+  Sparkles,
   Square,
   Trash2,
   Volume2,
 } from 'lucide-react'
 
+import { OFFICIAL_CLUB_RULES } from '../../data/rules-data'
 import { useAuth } from '../../lib/auth-client'
 import {
   deleteVoiceAnnouncementFn,
   getClubSettingsFn,
+  resetOfficialClubRulesFn,
   updateClubSettingsFn,
   uploadVoiceAnnouncementFn,
 } from '../../server/api'
-import { Button, SectionTitle, TicketCard } from '../ui'
+import { Button, Dialog, SectionTitle, TicketCard } from '../ui'
 import { useToast } from '../ui/toast-context'
 
 export function AdminRulesTab() {
@@ -35,6 +38,8 @@ export function AdminRulesTab() {
   const [loadError, setLoadError] = useState('')
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false)
   const [isSavingRules, setIsSavingRules] = useState(false)
+  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false)
+  const [isResettingRules, setIsResettingRules] = useState(false)
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false)
@@ -244,6 +249,32 @@ export function AdminRulesTab() {
     }
   }
 
+  const handleResetOfficialRules = async (directSave: boolean) => {
+    if (!token) return
+    setRulesText(OFFICIAL_CLUB_RULES)
+    if (directSave) {
+      setIsResettingRules(true)
+      try {
+        await resetOfficialClubRulesFn({ data: { sessionToken: token } })
+        notify(
+          'Shuruucda rasmiga ah ee Best Academy (40 Qodob) si guul leh ayaa loo keydiyay!',
+          'success',
+        )
+        setIsRulesModalOpen(false)
+      } catch (err: any) {
+        notify(err?.message || 'Qalad ayaa dhacay keydinta shuruucda', 'danger')
+      } finally {
+        setIsResettingRules(false)
+      }
+    } else {
+      setIsRulesModalOpen(false)
+      notify(
+        'Shuruucda rasmiga ah waa la soo geliyay. Fadlan dib u eeg kadibna guji "Keydi Shuruucda".',
+        'neutral',
+      )
+    }
+  }
+
   return (
     <div className="space-y-6 pb-16">
       <div>
@@ -425,11 +456,24 @@ export function AdminRulesTab() {
           </TicketCard>
 
           <TicketCard className="p-4 space-y-3">
-            <div className="flex items-center gap-2 text-gold">
-              <BookOpen className="h-4 w-4" />
-              <SectionTitle eyebrow="XEERARKA & ANSHAXA KOOXDA" as="h3">
-                Shuruucda Rasmiga ah ee Kooxda
-              </SectionTitle>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-gold">
+                <BookOpen className="h-4 w-4" />
+                <SectionTitle eyebrow="XEERARKA & ANSHAXA KOOXDA" as="h3">
+                  Shuruucda Rasmiga ah ee Kooxda
+                </SectionTitle>
+              </div>
+
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsRulesModalOpen(true)}
+                className="gap-1.5 text-xs border-gold/40 text-gold hover:bg-gold/10 self-start sm:self-auto"
+                title="Soo geli shuruucda rasmiga ah ee Best Academy (40 Qodob)"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-gold" />
+                <span>Soo Geli Shuruucda Rasmiga ah</span>
+              </Button>
             </div>
 
             <form onSubmit={handleSaveRules} className="space-y-3">
@@ -437,16 +481,20 @@ export function AdminRulesTab() {
                 value={rulesText}
                 onChange={(e) => setRulesText(e.target.value)}
                 placeholder="Qor dhammaan shuruucda kooxda..."
-                rows={8}
-                className="ui-input text-sm leading-relaxed"
+                rows={14}
+                className="ui-input text-xs sm:text-sm font-mono leading-relaxed"
               />
 
-              <div className="flex justify-end">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-1">
+                <span className="text-[0.6875rem] text-chalk-dim">
+                  Wadarta: {rulesText.length} xaraf {rulesText ? '• ~40 Qodob oo sharci ah' : ''}
+                </span>
+
                 <Button
                   type="submit"
                   variant="primary"
                   busy={isSavingRules}
-                  className="text-xs py-2 px-4 gap-1.5"
+                  className="text-xs py-2 px-4 gap-1.5 self-end sm:self-auto"
                 >
                   <Save className="h-3.5 w-3.5" />
                   <span>Keydi Shuruucda</span>
@@ -454,6 +502,75 @@ export function AdminRulesTab() {
               </div>
             </form>
           </TicketCard>
+
+          {/* Dialog for loading official Best Academy rules */}
+          <Dialog
+            open={isRulesModalOpen}
+            onClose={() => !isResettingRules && setIsRulesModalOpen(false)}
+            title="Soo Gelinta Shuruucda Best Academy"
+          >
+            <div className="space-y-4 text-xs text-chalk-dim">
+              <div className="rounded-xl border border-gold/30 bg-gold/5 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-gold font-bold text-sm">
+                  <Sparkles className="h-4 w-4" />
+                  <span>HANAANKA IYO AWAAMIIRTA BEST ACADEMY</span>
+                </div>
+                <p className="text-xs text-chalk leading-relaxed">
+                  Waxaad hal mar soo gelin kartaa dhammaan 40-ka qodob ee rasmiga ah ee Best Academy (Waqtiga, Bacaadka, Salaadda, Agabka, Jadwalka 4-ta maalin, Aalamiitooyinka, Anshaxa, iwm).
+                </p>
+              </div>
+
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  disabled={isResettingRules}
+                  onClick={() => handleResetOfficialRules(true)}
+                  className="w-full text-left p-3.5 rounded-xl border border-gold/40 bg-gold/10 hover:bg-gold/20 transition-colors cursor-pointer group"
+                >
+                  <div className="font-bold text-gold text-xs flex items-center justify-between">
+                    <span>1. Soo Geli oo Toos u Keydi (Save Now)</span>
+                    <span className="text-[0.625rem] uppercase px-1.5 py-0.5 rounded bg-gold/20 text-gold border border-gold/30">
+                      Toos u keydi
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[0.6875rem] text-chalk-dim group-hover:text-chalk transition-colors">
+                    Waxay si toos ah database-ka ugu keydinaysaa 40-ka qodob ee shuruucda Best Academy.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isResettingRules}
+                  onClick={() => handleResetOfficialRules(false)}
+                  className="w-full text-left p-3.5 rounded-xl border border-club-border bg-surface hover:bg-surface-elevated transition-colors cursor-pointer group"
+                >
+                  <div className="font-bold text-chalk text-xs">
+                    2. Soo Geli Sanduuqa Kaliya (Dib u eegis)
+                  </div>
+                  <p className="mt-1 text-[0.6875rem] text-chalk-dim group-hover:text-chalk transition-colors">
+                    Waxay qoraalka soo gelinaysaa sanduuqa qoraalka si aad wax uga beddesho ka hor inta aadan keydin.
+                  </p>
+                </button>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-club-border">
+                <Button
+                  variant="ghost"
+                  type="button"
+                  disabled={isResettingRules}
+                  onClick={() => setIsRulesModalOpen(false)}
+                >
+                  Ka Noqo
+                </Button>
+                {isResettingRules && (
+                  <div className="flex items-center gap-2 text-xs text-gold">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Waa la keydinayaa shuruucda...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Dialog>
         </>
       )}
     </div>

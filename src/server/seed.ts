@@ -1,3 +1,4 @@
+import { OFFICIAL_CLUB_RULES } from '../data/rules-data'
 import { OFFICIAL_100_TIPS } from '../data/tips-data'
 import { getDatabase } from '../db/connection.server'
 import { clubSettings, players, scheduleEntries, tips } from '../db/schema'
@@ -137,8 +138,7 @@ export async function runDatabaseSeed() {
     await db.insert(clubSettings).values({
       announcementText:
         'Kusoo dhowaada Best Official App. Dhammaan ciyaartooyda waxaa la ogeysiinayaa in tababarka la ilaaliyo.',
-      rulesText:
-        '1. Ilaali waqtiga tababarka iyo kulamada kooxda.\n2. Ixtiraam maamulka, tababaraha iyo asxaabta kooxda.\n3. Haysashada direyska kooxda iyo daryeelka agabka waa khasab.\n4. Cudurdaarka waa in la soo gudbiyaa ka hor inta uusan tababarku bilaaban.\n5. Ka fogow anshax xumada iyo doodaha aan loo baahnayn.',
+      rulesText: OFFICIAL_CLUB_RULES,
     })
     console.log('✓ Seeded club settings.')
   }
