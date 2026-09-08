@@ -1,3 +1,4 @@
+import { OFFICIAL_100_TIPS } from '../data/tips-data'
 import { getDatabase } from '../db/connection.server'
 import { clubSettings, players, scheduleEntries, tips } from '../db/schema'
 import { provisionAdminAccount } from '../lib/auth.server'
@@ -145,22 +146,14 @@ export async function runDatabaseSeed() {
   // 5. Seed Initial Tips (Waano) if empty
   const existingTips = await db.select().from(tips).limit(1)
   if (existingTips.length === 0) {
-    console.log('Seeding initial football tips...')
-    await db.insert(tips).values([
-      {
-        text: 'Hurdo kugu filan seexo habeenka ka horreeya ciyaarta (ugu yaraan 8 saacadood).',
-        sortOrder: 1,
-      },
-      {
-        text: 'Cab biyo badan maalin kasta, gaar ahaan 2 saacadood ka hor tababarka.',
-        sortOrder: 2,
-      },
-      {
-        text: 'Ixtiraam garsooraha iyo asxaabtaada, kubbaddu waa anshax iyo ciyaar wanaag.',
-        sortOrder: 3,
-      },
-    ])
-    console.log('✓ Seeded tips.')
+    console.log('Seeding 100 official football tips...')
+    await db.insert(tips).values(
+      OFFICIAL_100_TIPS.map((tip) => ({
+        text: tip.text,
+        sortOrder: tip.sortOrder,
+      })),
+    )
+    console.log(`✓ Seeded ${OFFICIAL_100_TIPS.length} tips.`)
   }
 
   console.log('--- Database Seed Complete! ---')

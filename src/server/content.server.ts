@@ -27,6 +27,7 @@ import { getWhatsAppUrl } from '../lib/whatsapp'
 import { getAttendanceForDate } from './attendance.server'
 import { getActiveRoster } from './players.server'
 import { getPlayerLeaves, getRequestsInboxAdmin } from './requests.server'
+import { OFFICIAL_100_TIPS } from '../data/tips-data'
 import { getPlayerMonthlyStats } from './stats.server'
 import { resolveStorageUrl, VOICE_BUCKET } from './storage.server'
 
@@ -50,9 +51,66 @@ export async function addTip(text: string): Promise<Tip> {
   return inserted
 }
 
+export async function updateTip(id: string, text: string): Promise<Tip> {
+  const db = getDatabase()
+  const trimmed = text.trim()
+  if (!trimmed) throw new Error('Qoraalka waanadu waa khasab')
+
+  const [updated] = await db
+    .update(tips)
+    .set({ text: trimmed, updatedAt: new Date() })
+    .where(eq(tips.id, id))
+    .returning()
+
+  if (!updated) throw new Error('Waanada lama helin')
+  return updated
+}
+
 export async function deleteTip(id: string): Promise<void> {
   const db = getDatabase()
   await db.delete(tips).where(eq(tips.id, id))
+}
+
+export async function bulkImport100Tips(
+  mode: 'replace' | 'append' = 'replace',
+): Promise<{ count: number; message: string }> {
+  const db = getDatabase()
+
+  if (mode === 'replace') {
+    await db.delete(tips)
+    await db.insert(tips).values(
+      OFFICIAL_100_TIPS.map((tip) => ({
+        text: tip.text,
+        sortOrder: tip.sortOrder,
+      })),
+    )
+    return {
+      count: OFFICIAL_100_TIPS.length,
+      message: `Dhammaan 100-ka waano ayaa si guul leh loo soo galiyay!`,
+    }
+  } else {
+    const existing = await db.select({ text: tips.text }).from(tips)
+    const existingTexts = new Set(
+      existing.map((t) => t.text.trim().toLowerCase()),
+    )
+    const toInsert = OFFICIAL_100_TIPS.filter(
+      (tip) => !existingTexts.has(tip.text.trim().toLowerCase()),
+    )
+
+    if (toInsert.length > 0) {
+      await db.insert(tips).values(
+        toInsert.map((tip) => ({
+          text: tip.text,
+          sortOrder: tip.sortOrder,
+        })),
+      )
+    }
+
+    return {
+      count: toInsert.length,
+      message: `${toInsert.length} waano oo cusub ayaa lagu daray.`,
+    }
+  }
 }
 
 /* ==================== TEAM CHAT & DIRECTORY ==================== */

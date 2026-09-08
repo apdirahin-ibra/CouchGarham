@@ -21,6 +21,7 @@ import {
 import {
   addGalleryPhoto,
   addTip,
+  bulkImport100Tips,
   deleteTip,
   getAdminDashboardSummary,
   getChatMessages,
@@ -31,6 +32,7 @@ import {
   getTips,
   postChatMessage,
   updateClubSettings,
+  updateTip,
 } from './content.server'
 import {
   addFinanceEntry,
@@ -842,6 +844,37 @@ export const deleteTipFn = createServerFn({ method: 'POST' })
     const actor = await resolveActorFromToken(data.sessionToken)
     requireAdmin(actor)
     return deleteTip(data.id)
+  })
+
+export const updateTipFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string; id: string; text: string }) =>
+    z
+      .object({
+        sessionToken: z.string().max(256),
+        id: z.string().uuid(),
+        text: z.string().trim().min(2).max(500),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return updateTip(data.id, data.text)
+  })
+
+export const bulkImport100TipsFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string; mode?: 'replace' | 'append' }) =>
+    z
+      .object({
+        sessionToken: z.string().max(256),
+        mode: z.enum(['replace', 'append']).optional().default('replace'),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return bulkImport100Tips(data.mode)
   })
 
 export const getClubSettingsFn = createServerFn({ method: 'POST' })
