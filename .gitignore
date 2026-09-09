@@ -11,8 +11,9 @@ dist/
 build/
 .tanstack/
 
-# Vercel local project metadata
+# Vercel and Netlify local project metadata
 .vercel/
+.netlify/
 
 # Supabase local runtime state
 .supabase/
