@@ -13,6 +13,7 @@ import {
   excuseRequests,
   leaveRequests,
   loginLogs,
+  playerFeeRecords,
   playerMatchRatings,
   playerMonthlyStats,
   players,
@@ -299,6 +300,7 @@ export async function deletePlayerAdmin(
   await db.delete(suggestions).where(eq(suggestions.playerId, id))
   await db.delete(playerMonthlyStats).where(eq(playerMonthlyStats.playerId, id))
   await db.delete(playerMatchRatings).where(eq(playerMatchRatings.playerId, id))
+  await db.delete(playerFeeRecords).where(eq(playerFeeRecords.playerId, id))
 
   // Nullify references in chat and logs so chat history remains readable with snapshot names
   await db
@@ -322,4 +324,32 @@ export async function deletePlayerAdmin(
   }
 
   return { success: true, id }
+}
+
+/**
+ * Player: Returns authenticated player's full profile info for Profile modal.
+ */
+export async function getMyPlayerProfile(playerId: string) {
+  const db = getDatabase()
+  const [player] = await db
+    .select()
+    .from(players)
+    .where(eq(players.id, playerId))
+    .limit(1)
+
+  if (!player) {
+    throw new Error('Ciyaartoyga lama helin (Player not found)')
+  }
+
+  return {
+    id: player.id,
+    name: player.name,
+    nickname: player.nickname,
+    jerseyNumber: player.jerseyNumber,
+    position: player.position,
+    whatsapp: player.whatsapp,
+    pin: player.legacyPin,
+    isActive: player.isActive,
+    createdAt: player.createdAt,
+  }
 }

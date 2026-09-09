@@ -5,12 +5,17 @@ import {
   Bell,
   Calendar,
   CheckCircle,
+  ChevronRight,
   Clock,
+  DollarSign,
+  FileText,
   History,
+  Info,
   Pause,
   Play,
   RefreshCw,
   Star,
+  User,
   Volume2,
   XCircle,
 } from 'lucide-react'
@@ -35,6 +40,7 @@ import {
   StatusBadge,
   TicketCard,
 } from '../ui'
+import { PlayerProfileModal } from './PlayerProfileModal'
 
 const CACHED_PLAYER_DASHBOARD_KEY = 'best_official_cached_player_dashboard'
 
@@ -65,6 +71,9 @@ export function PlayerDashboardTab({
   const [loadError, setLoadError] = useState('')
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
   const [showRatingsHistoryModal, setShowRatingsHistoryModal] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [showAttendanceDetailsModal, setShowAttendanceDetailsModal] =
+    useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const loadDashboard = useCallback(() => {
@@ -121,6 +130,12 @@ export function PlayerDashboardTab({
   const latestScore = latestRating
     ? computeOverallRatingScore(latestRating)
     : null
+  const monthAttendanceRecords: {
+    attendanceDate: string
+    status: 'xadir' | 'maqan' | 'daahay' | null
+    reason: string | null
+  }[] = dashboard?.monthAttendanceRecords ?? []
+  const feeStatus = dashboard?.feeStatus ?? null
 
   const handleToggleVoice = () => {
     if (!audioRef.current) return
@@ -163,17 +178,28 @@ export function PlayerDashboardTab({
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="rounded-xl border border-gold/30 bg-surface-raised p-4 shadow-md">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gold">
-          <Calendar className="h-4 w-4" />
-          <span>Taariikhda Maanta</span>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-gold/30 bg-surface-raised p-4 shadow-md">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gold">
+            <Calendar className="h-4 w-4" />
+            <span>Taariikhda Maanta</span>
+          </div>
+          <h2 className="mt-1 font-display text-2xl font-bold text-chalk">
+            {formattedToday}
+          </h2>
+          <span className="text-xs font-semibold text-gold">
+            Ku soo dhowow, {user?.name || 'Ciyaartoy'}!
+          </span>
         </div>
-        <h2 className="mt-1 font-display text-2xl font-bold text-chalk">
-          {formattedToday}
-        </h2>
-        <span className="text-xs font-semibold text-gold">
-          Ku soo dhowow, {user?.name || 'Ciyaartoy'}!
-        </span>
+
+        <Button
+          variant="secondary"
+          className="self-start sm:self-auto text-xs py-1.5 px-3 gap-1.5 border-gold/40 text-gold hover:bg-gold/20"
+          onClick={() => setShowProfileModal(true)}
+        >
+          <User className="h-3.5 w-3.5" />
+          <span>Profile & Settings</span>
+        </Button>
       </div>
 
       <TicketCard className="border-gold/40 p-3.5 sm:p-4 space-y-3">
@@ -284,13 +310,22 @@ export function PlayerDashboardTab({
         </div>
 
         {myTodayStatus !== 'xadir' ? (
-          <div className="flex justify-end pt-1">
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-club-border/60">
             <Button
               variant="secondary"
-              className="text-xs py-1.5 px-3"
+              className="text-xs py-1.5 px-3 gap-1.5"
               onClick={() => onNavigateToTab('attendance')}
             >
-              Geli Cudurdaar
+              <FileText className="h-3.5 w-3.5" />
+              <span>Cudurdaar Geli</span>
+            </Button>
+            <Button
+              variant="secondary"
+              className="text-xs py-1.5 px-3 gap-1.5 border-gold/40 text-gold hover:bg-gold/10"
+              onClick={() => onNavigateToTab('leaves')}
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Codso Fasax</span>
             </Button>
           </div>
         ) : null}
@@ -410,6 +445,76 @@ export function PlayerDashboardTab({
         )}
       </TicketCard>
 
+      {/* Xaaladdaada Lacagta Bishan */}
+      <TicketCard className="p-4 space-y-3 border-gold/30">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold/10 text-gold border border-gold/30">
+              <DollarSign className="h-5 w-5" />
+            </div>
+            <div>
+              <SectionTitle eyebrow="LACAGTA BISHAN" as="h3">
+                Xaaladdaada Lacagta
+              </SectionTitle>
+              <span className="text-xs text-chalk-dim">
+                Bishan: {currentMonth}
+              </span>
+            </div>
+          </div>
+
+          <StatusBadge
+            tone={feeStatus?.status === 'paid' ? 'success' : 'danger'}
+            className="text-xs font-bold self-start sm:self-auto"
+          >
+            {feeStatus?.status === 'paid'
+              ? 'Wuu Dhiibay'
+              : `Waa Lagu Leeyahay: $${(feeStatus?.debt ?? 10).toFixed(2)}`}
+          </StatusBadge>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center pt-1">
+          <div className="rounded-lg border border-club-border bg-pitch-deep p-2.5">
+            <span className="block text-[0.6875rem] text-chalk-dim uppercase font-bold">
+              Lagaa rabo
+            </span>
+            <strong className="text-base font-bold text-chalk">
+              ${(feeStatus?.expectedAmount ?? 10).toFixed(2)}
+            </strong>
+          </div>
+          <div className="rounded-lg border border-club-border bg-pitch-deep p-2.5">
+            <span className="block text-[0.6875rem] text-chalk-dim uppercase font-bold">
+              Aad dhiibtay
+            </span>
+            <strong className="text-base font-bold text-success">
+              ${(feeStatus?.paidAmount ?? 0).toFixed(2)}
+            </strong>
+          </div>
+          <div className="rounded-lg border border-club-border bg-pitch-deep p-2.5">
+            <span className="block text-[0.6875rem] text-chalk-dim uppercase font-bold">
+              Lagu leeyahay
+            </span>
+            <strong
+              className={`text-base font-bold ${
+                (feeStatus?.debt ?? 10) > 0 ? 'text-danger' : 'text-gold'
+              }`}
+            >
+              ${(feeStatus?.debt ?? 10).toFixed(2)}
+            </strong>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-1">
+          <button
+            type="button"
+            onClick={() => onNavigateToTab('finance')}
+            className="flex items-center gap-1 text-xs font-bold text-gold hover:underline cursor-pointer"
+          >
+            <span>Eeg Diiwaanka Xisaabta Guud</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </TicketCard>
+
       <div>
         <SectionTitle eyebrow="NATIIJADAADA BISHA" as="h3">
           Xogtaada Bishan ({currentMonth})
@@ -423,15 +528,23 @@ export function PlayerDashboardTab({
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-        <TicketCard className="p-3 sm:p-4 text-center flex flex-col items-center justify-center">
-          <span className="block text-[0.6875rem] font-bold uppercase tracking-wider text-gold">
+        <TicketCard
+          className="p-3 sm:p-4 text-center flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-all group"
+          onClick={() => setShowAttendanceDetailsModal(true)}
+          title="Guji si aad u aragto maalmaha aad timid iyo kuwa aad maqnayd"
+        >
+          <span className="block text-[0.6875rem] font-bold uppercase tracking-wider text-gold group-hover:underline">
             Xaadiriska Bishan
           </span>
           <strong className="block my-1 font-display text-2xl sm:text-3xl font-bold text-chalk leading-none">
             {stats.xadirCount}
           </strong>
-          <span className="block text-[0.6875rem] text-success font-semibold leading-tight">
-            Kulamadii aad timid
+          <span className="block text-[0.6875rem] text-success font-semibold leading-tight flex items-center gap-1 justify-center">
+            <span>Kulamadii aad timid</span>
+            <Info className="h-3 w-3 text-gold" />
+          </span>
+          <span className="text-[0.625rem] text-chalk-dim mt-1">
+            Guji si aad u aragto diiwaanka
           </span>
         </TicketCard>
 
@@ -521,6 +634,150 @@ export function PlayerDashboardTab({
           )}
         </div>
       </Dialog>
+
+      {/* Modal Diiwaanka Xaadiriska Bishan */}
+      <Dialog
+        open={showAttendanceDetailsModal}
+        onClose={() => setShowAttendanceDetailsModal(false)}
+        title={`Diiwaanka Xaadiriskaaga Bishan (${currentMonth})`}
+      >
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="rounded-lg border border-success/30 bg-success/10 p-2.5">
+              <span className="block text-[0.625rem] font-bold uppercase text-success">
+                Xaadir (Timid)
+              </span>
+              <strong className="font-display text-xl font-bold text-success">
+                {stats.xadirCount}
+              </strong>
+            </div>
+            <div className="rounded-lg border border-danger/30 bg-danger/10 p-2.5">
+              <span className="block text-[0.625rem] font-bold uppercase text-danger">
+                Maqan
+              </span>
+              <strong className="font-display text-xl font-bold text-danger">
+                {stats.maqanCount}
+              </strong>
+            </div>
+            <div className="rounded-lg border border-warning/30 bg-warning/10 p-2.5">
+              <span className="block text-[0.625rem] font-bold uppercase text-warning">
+                Daahay
+              </span>
+              <strong className="font-display text-xl font-bold text-warning">
+                {stats.daahayCount}
+              </strong>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <SectionTitle eyebrow="TAARIIKHAHA KULAMADA" as="h3">
+              Maalmihii la tababartay / ciyaaray
+            </SectionTitle>
+
+            {monthAttendanceRecords.length === 0 ? (
+              <p className="text-xs text-chalk-dim text-center py-4">
+                Weli ma jiraan kulamo la diiwaangeliyay bishan.
+              </p>
+            ) : (
+              <div className="divide-y divide-club-border rounded-xl border border-club-border bg-surface-raised overflow-hidden">
+                {monthAttendanceRecords.map((item, idx) => (
+                  <div
+                    key={`${item.attendanceDate}-${idx}`}
+                    className="flex items-center justify-between p-3"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {item.status === 'xadir' ? (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/20 text-success">
+                          <CheckCircle className="h-4 w-4" />
+                        </div>
+                      ) : item.status === 'maqan' ? (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-danger/20 text-danger">
+                          <XCircle className="h-4 w-4" />
+                        </div>
+                      ) : (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/20 text-warning">
+                          <Clock className="h-4 w-4" />
+                        </div>
+                      )}
+
+                      <div>
+                        <strong className="block text-xs font-bold text-chalk">
+                          {formatSomaliDate(item.attendanceDate)}
+                        </strong>
+                        {item.reason ? (
+                          <span className="text-[0.6875rem] text-gold">
+                            Sabab: {item.reason}
+                          </span>
+                        ) : (
+                          <span className="text-[0.6875rem] text-chalk-dim">
+                            {item.status === 'xadir'
+                              ? 'Waad joogtay tababarka'
+                              : item.status === 'maqan'
+                                ? 'Kama qaybgelin tababarka'
+                                : 'Waad daahday'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <StatusBadge
+                      tone={
+                        item.status === 'xadir'
+                          ? 'success'
+                          : item.status === 'maqan'
+                            ? 'danger'
+                            : 'warning'
+                      }
+                      className="text-xs capitalize font-bold"
+                    >
+                      {item.status ?? 'Lama qaadin'}
+                    </StatusBadge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-club-border">
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                className="text-xs py-1 px-2.5"
+                onClick={() => {
+                  setShowAttendanceDetailsModal(false)
+                  onNavigateToTab('attendance')
+                }}
+              >
+                Geli Cudurdaar
+              </Button>
+              <Button
+                variant="secondary"
+                className="text-xs py-1 px-2.5 border-gold/40 text-gold hover:bg-gold/10"
+                onClick={() => {
+                  setShowAttendanceDetailsModal(false)
+                  onNavigateToTab('leaves')
+                }}
+              >
+                Codso Fasax
+              </Button>
+            </div>
+            <Button
+              variant="ghost"
+              className="text-xs"
+              onClick={() => setShowAttendanceDetailsModal(false)}
+            >
+              Xir
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Player Profile & Settings Modal */}
+      <PlayerProfileModal
+        open={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        onNavigateToTab={onNavigateToTab}
+      />
     </div>
   )
 }

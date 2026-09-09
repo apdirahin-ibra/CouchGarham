@@ -6,6 +6,7 @@ import { formatSomaliDate, getTodayDateString } from '../../lib/dates'
 import {
   adminCreateLeaveFn,
   getRequestsInboxAdminFn,
+  getRosterForLoginFn,
   reviewExcuseRequestFn,
   reviewJoinRequestFn,
   reviewLeaveRequestFn,
@@ -58,6 +59,15 @@ export function AdminRequestsTab() {
 
   // Direct Admin Leave Modal State
   const [isDirectLeaveOpen, setIsDirectLeaveOpen] = useState(false)
+  const [availablePlayers, setAvailablePlayers] = useState<
+    {
+      id: string
+      name: string
+      nickname: string | null
+      jerseyNumber: number | null
+      position: string | null
+    }[]
+  >([])
   const [directPlayerId, setDirectPlayerId] = useState('')
   const [directLeaveDate, setDirectLeaveDate] = useState(getTodayDateString())
   const [directReason, setDirectReason] = useState('')
@@ -82,6 +92,16 @@ export function AdminRequestsTab() {
   useEffect(() => {
     loadRequests()
   }, [loadRequests])
+
+  useEffect(() => {
+    getRosterForLoginFn()
+      .then((list) => {
+        if (list) setAvailablePlayers(list)
+      })
+      .catch((err) => {
+        console.warn('Roster load notice in AdminRequestsTab:', err)
+      })
+  }, [])
 
   const handleExcuseDecision = async (
     id: string,
@@ -439,13 +459,25 @@ export function AdminRequestsTab() {
         title="Fasax Toos ah Si Ciyaartoy (Admin)"
       >
         <form onSubmit={handleDirectLeaveSubmit} className="space-y-3.5">
-          <TextField
-            label="Player ID (UUID) *"
-            value={directPlayerId}
-            onChange={(e) => setDirectPlayerId(e.target.value)}
-            placeholder="e.g. 11111111-1111-1111-1111-111111111111"
-            required
-          />
+          <div>
+            <label className="mb-1 block text-xs font-bold text-chalk">
+              Dooro Ciyaartoyga *
+            </label>
+            <select
+              value={directPlayerId}
+              onChange={(e) => setDirectPlayerId(e.target.value)}
+              className="w-full rounded-lg border border-club-border bg-pitch-deep px-3 py-2 text-sm text-chalk focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
+              required
+            >
+              <option value="">-- Dooro Ciyaartoyga la fasaxayo --</option>
+              {availablePlayers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} (#{p.jerseyNumber ?? '-'} -{' '}
+                  {p.position ?? 'Ciyaartoy'})
+                </option>
+              ))}
+            </select>
+          </div>
           <TextField
             label="Taariikhda Fasaxa *"
             type="date"

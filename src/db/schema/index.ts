@@ -57,8 +57,11 @@ export {
 
 export {
   financeEntries,
+  playerFeeRecords,
   type FinanceEntry,
   type NewFinanceEntry,
+  type NewPlayerFeeRecord,
+  type PlayerFeeRecord,
 } from './finance'
 
 export {

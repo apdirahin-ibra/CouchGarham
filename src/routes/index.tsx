@@ -59,6 +59,16 @@ function IndexPage() {
   const [visitedPlayerTabs, setVisitedPlayerTabs] = useState<Set<string>>(
     () => new Set(['dashboard']),
   )
+  const [adminAttendanceDate, setAdminAttendanceDate] = useState<
+    string | undefined
+  >(undefined)
+
+  const handleNavigateAdminTab = (tab: any, date?: string) => {
+    if (date && tab === 'attendance') {
+      setAdminAttendanceDate(date)
+    }
+    setAdminTab(tab)
+  }
 
   useEffect(() => {
     setVisitedAdminTabs((prev) => {
@@ -83,8 +93,8 @@ function IndexPage() {
       <div className="min-h-screen bg-pitch-deep text-chalk flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-gold border-t-transparent" />
-          <span className="text-sm font-semibold text-gold">
-            Soo dejinaya xogta kooxda...
+          <span className="font-display font-bold tracking-wider text-chalk">
+            COUCH GARHAM
           </span>
         </div>
       </div>
@@ -96,7 +106,7 @@ function IndexPage() {
   }
 
   return (
-    <div className="min-h-screen bg-pitch-deep text-chalk flex flex-col">
+    <div className="min-h-screen bg-pitch-deep text-chalk flex flex-col font-sans selection:bg-gold selection:text-pitch">
       <TopBar />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-3 py-4 sm:px-6 sm:py-6 pb-24 sm:pb-28">
@@ -105,7 +115,7 @@ function IndexPage() {
             {visitedAdminTabs.has('dashboard') && (
               <div className={adminTab === 'dashboard' ? 'block' : 'hidden'}>
                 <AdminDashboardTab
-                  onNavigateToTab={setAdminTab}
+                  onNavigateToTab={handleNavigateAdminTab}
                   onPendingRequestsCountChange={setPendingRequestsCount}
                 />
               </div>
@@ -117,7 +127,7 @@ function IndexPage() {
             )}
             {visitedAdminTabs.has('attendance') && (
               <div className={adminTab === 'attendance' ? 'block' : 'hidden'}>
-                <AdminAttendanceTab />
+                <AdminAttendanceTab selectedDate={adminAttendanceDate} />
               </div>
             )}
             {visitedAdminTabs.has('stats') && (
@@ -132,7 +142,7 @@ function IndexPage() {
             )}
             {visitedAdminTabs.has('schedule') && (
               <div className={adminTab === 'schedule' ? 'block' : 'hidden'}>
-                <AdminScheduleTab />
+                <AdminScheduleTab onNavigateToTab={handleNavigateAdminTab} />
               </div>
             )}
             {visitedAdminTabs.has('chat') && (
@@ -182,7 +192,7 @@ function IndexPage() {
             )}
             {visitedPlayerTabs.has('schedule') && (
               <div className={playerTab === 'schedule' ? 'block' : 'hidden'}>
-                <PlayerScheduleTab />
+                <PlayerScheduleTab onNavigateToTab={setPlayerTab} />
               </div>
             )}
             {visitedPlayerTabs.has('leaves') && (

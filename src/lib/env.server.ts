@@ -19,11 +19,17 @@ const postgresUrl = z
 
 function resolveBetterAuthUrl(): string {
   const direct = env.BETTER_AUTH_URL?.trim()
-  if (direct && (direct.startsWith('http://') || direct.startsWith('https://'))) {
+  if (
+    direct &&
+    (direct.startsWith('http://') || direct.startsWith('https://'))
+  ) {
     return direct
   }
   const netlifyUrl = env.URL?.trim() || env.DEPLOY_URL?.trim()
-  if (netlifyUrl && (netlifyUrl.startsWith('http://') || netlifyUrl.startsWith('https://'))) {
+  if (
+    netlifyUrl &&
+    (netlifyUrl.startsWith('http://') || netlifyUrl.startsWith('https://'))
+  ) {
     return netlifyUrl
   }
   const vercelUrl = env.VERCEL_URL?.trim()

@@ -45,6 +45,22 @@ export function jsDayToSomaliDay(jsDay: number): SomaliWeekday {
 }
 
 /**
+ * Returns the most recent date (or today) string YYYY-MM-DD corresponding to a Somali weekday name.
+ */
+export function getDateForSomaliWeekday(dayName: string): string {
+  const targetJsDay = somaliDayToJsDay(dayName)
+  const now = new Date()
+  const currentJsDay = now.getDay()
+  const diff = (currentJsDay - targetJsDay + 7) % 7
+  const d = new Date(now)
+  d.setDate(now.getDate() - diff)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+/**
  * Formats a Date object or ISO date string into a friendly Somali date banner string:
  * e.g. "Axad, 30 Ogosto 2026"
  */

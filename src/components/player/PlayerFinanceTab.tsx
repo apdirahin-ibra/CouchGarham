@@ -3,13 +3,14 @@ import {
   AlertCircle,
   ArrowDownCircle,
   ArrowUpCircle,
+  DollarSign,
   RefreshCw,
 } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
-import { formatSomaliDate } from '../../lib/dates'
-import { getFinanceLedgerFn } from '../../server/api'
-import { Button, SectionTitle, TicketCard } from '../ui'
+import { formatSomaliDate, getCurrentMonthKey } from '../../lib/dates'
+import { getFinanceLedgerFn, getMyPlayerFeeStatusFn } from '../../server/api'
+import { Button, SectionTitle, StatusBadge, TicketCard } from '../ui'
 
 type FinanceRow = {
   id: string
@@ -19,14 +20,27 @@ type FinanceRow = {
   entryDate: string
 }
 
+type PlayerFeeStatus = {
+  expectedAmount: number
+  paidAmount: number
+  debt: number
+  status: string
+  statusLabel: string
+  paidAt: string | null
+  note: string | null
+  monthKey: string
+}
+
 export function PlayerFinanceTab() {
   const { token } = useAuth()
+  const currentMonth = getCurrentMonthKey()
   const [entries, setEntries] = useState<FinanceRow[]>([])
   const [totals, setTotals] = useState({
     totalIncome: 0,
     totalExpense: 0,
     balance: 0,
   })
+  const [playerFee, setPlayerFee] = useState<PlayerFeeStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -34,11 +48,15 @@ export function PlayerFinanceTab() {
     if (!token) return
     setIsLoading(true)
     setLoadError('')
-    getFinanceLedgerFn({ data: { sessionToken: token } })
-      .then((data) => {
-        if (data) {
+
+    Promise.all([
+      getFinanceLedgerFn({ data: { sessionToken: token } }),
+      getMyPlayerFeeStatusFn({ data: { sessionToken: token } }),
+    ])
+      .then(([ledgerData, feeData]) => {
+        if (ledgerData) {
           setEntries(
-            data.entries.map((e: any) => ({
+            ledgerData.entries.map((e: any) => ({
               id: e.id,
               type: e.type,
               amount: parseFloat(e.amount),
@@ -46,7 +64,10 @@ export function PlayerFinanceTab() {
               entryDate: e.entryDate,
             })),
           )
-          setTotals(data.totals)
+          setTotals(ledgerData.totals)
+        }
+        if (feeData) {
+          setPlayerFee(feeData as any)
         }
       })
       .catch((err: any) => {
@@ -63,6 +84,78 @@ export function PlayerFinanceTab() {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Xaaladdaada Lacagta Bishan */}
+      <TicketCard className="p-4 space-y-3.5 border-gold/40">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 text-gold border border-gold/30">
+              <DollarSign className="h-5 w-5" />
+            </div>
+            <div>
+              <SectionTitle eyebrow="KHIDMADDA BISHAN" as="h2">
+                Xaaladdaada Lacagta Bishan
+              </SectionTitle>
+              <p className="text-xs text-chalk-dim m-0">
+                Bishan: {currentMonth} • Khidmadda bishii ee kooxda
+              </p>
+            </div>
+          </div>
+
+          <StatusBadge
+            tone={playerFee?.status === 'paid' ? 'success' : 'danger'}
+            className="text-xs font-bold py-1 px-3 self-start sm:self-auto"
+          >
+            {playerFee?.status === 'paid'
+              ? 'Wuu Dhiibay'
+              : `Waa Lagu Leeyahay: $${(playerFee?.debt ?? 10).toFixed(2)}`}
+          </StatusBadge>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2.5 pt-1 text-center">
+          <div className="rounded-xl border border-club-border bg-pitch-deep p-3">
+            <span className="block text-[0.6875rem] font-bold uppercase text-chalk-dim">
+              Lagaa rabo
+            </span>
+            <strong className="font-display text-lg sm:text-xl font-bold text-chalk">
+              ${(playerFee?.expectedAmount ?? 10).toFixed(2)}
+            </strong>
+          </div>
+
+          <div className="rounded-xl border border-success/30 bg-pitch-deep p-3">
+            <span className="block text-[0.6875rem] font-bold uppercase text-success">
+              Aad dhiibtay
+            </span>
+            <strong className="font-display text-lg sm:text-xl font-bold text-success">
+              ${(playerFee?.paidAmount ?? 0).toFixed(2)}
+            </strong>
+          </div>
+
+          <div className="rounded-xl border border-club-border bg-pitch-deep p-3">
+            <span className="block text-[0.6875rem] font-bold uppercase text-chalk-dim">
+              Lagu leeyahay
+            </span>
+            <strong
+              className={`font-display text-lg sm:text-xl font-bold ${
+                (playerFee?.debt ?? 10) > 0 ? 'text-danger' : 'text-gold'
+              }`}
+            >
+              ${(playerFee?.debt ?? 10).toFixed(2)}
+            </strong>
+          </div>
+        </div>
+
+        {playerFee?.paidAt ? (
+          <p className="text-[0.6875rem] text-success italic text-right m-0">
+            Taariikhda la dhiibay: {formatSomaliDate(playerFee.paidAt)}
+            {playerFee.note ? ` (${playerFee.note})` : ''}
+          </p>
+        ) : (
+          <p className="text-[0.6875rem] text-warning italic text-right m-0">
+            Fadlan khidmadda u dhiib maamulka kooxda si laguu diiwaangeliyo.
+          </p>
+        )}
+      </TicketCard>
+
       <div>
         <SectionTitle eyebrow="CADDAALADDA & DAACADNIMADA" as="h2">
           Xisaabta Guud ee Kooxda

@@ -30,10 +30,22 @@ type AttendanceItem = {
   reason: string
 }
 
-export function AdminAttendanceTab() {
+export function AdminAttendanceTab({
+  selectedDate: externalSelectedDate,
+}: {
+  selectedDate?: string
+} = {}) {
   const { token } = useAuth()
   const { notify } = useToast()
-  const [selectedDate, setSelectedDate] = useState(getTodayDateString())
+  const [selectedDate, setSelectedDate] = useState(
+    externalSelectedDate || getTodayDateString(),
+  )
+
+  useEffect(() => {
+    if (externalSelectedDate) {
+      setSelectedDate(externalSelectedDate)
+    }
+  }, [externalSelectedDate])
 
   const [roster, setRoster] = useState<AttendanceItem[]>([])
   const [isLoading, setIsLoading] = useState(true)

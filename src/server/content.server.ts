@@ -24,7 +24,11 @@ import {
   getTodayDateString,
 } from '../lib/dates'
 import { getWhatsAppUrl } from '../lib/whatsapp'
-import { getAttendanceForDate } from './attendance.server'
+import {
+  getAttendanceForDate,
+  getPlayerAttendanceHistory,
+} from './attendance.server'
+import { getPlayerFeeStatus } from './finance.server'
 import { getActiveRoster } from './players.server'
 import { getPlayerLeaves, getRequestsInboxAdmin } from './requests.server'
 import { OFFICIAL_CLUB_RULES } from '../data/rules-data'
@@ -383,6 +387,8 @@ export async function getPlayerDashboardSummary(playerId: string) {
     todayAttendance,
     latestRating,
     ratingsHistory,
+    attendanceHistory,
+    feeStatus,
   ] = await Promise.all([
     getClubSettings(),
     getPlayerMonthlyStats(playerId),
@@ -390,6 +396,8 @@ export async function getPlayerDashboardSummary(playerId: string) {
     getAttendanceForDate(today),
     getPlayerLatestRating(playerId),
     getPlayerMatchRatingsHistory(playerId),
+    getPlayerAttendanceHistory(playerId),
+    getPlayerFeeStatus(playerId, currentMonth),
   ])
 
   const usedThisMonth = leaves.filter(
@@ -398,6 +406,11 @@ export async function getPlayerDashboardSummary(playerId: string) {
       l.leaveDate < nextMonthStartDate &&
       l.status !== 'denied',
   ).length
+
+  const monthAttendanceRecords = attendanceHistory.filter(
+    (r) =>
+      r.attendanceDate >= startDate && r.attendanceDate < nextMonthStartDate,
+  )
 
   const myTodayRecord = todayAttendance.find((p) => p.playerId === playerId)
 
@@ -410,6 +423,8 @@ export async function getPlayerDashboardSummary(playerId: string) {
     myTodayStatus: myTodayRecord?.status ?? null,
     myTodayReason: myTodayRecord?.reason ?? null,
     stats: monthStats,
+    monthAttendanceRecords,
+    feeStatus,
     leaveUsedThisMonth: usedThisMonth,
     leaveMaxPerMonth: 3,
     latestRating,

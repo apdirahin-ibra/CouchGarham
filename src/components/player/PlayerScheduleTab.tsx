@@ -12,7 +12,11 @@ type ScheduleItem = {
   place: string
 }
 
-export function PlayerScheduleTab() {
+export function PlayerScheduleTab({
+  onNavigateToTab,
+}: {
+  onNavigateToTab?: (tab: string) => void
+}) {
   const { token } = useAuth()
   const [schedules, setSchedules] = useState<ScheduleItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -76,13 +80,30 @@ export function PlayerScheduleTab() {
           {schedules.map((schedule) => (
             <TicketCard key={schedule.id} className="p-4 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="rounded-md bg-gold/20 border border-gold px-2.5 py-0.5 font-display text-sm font-bold text-gold">
+                <button
+                  type="button"
+                  onClick={() => onNavigateToTab?.('attendance')}
+                  className="rounded-md bg-gold/20 border border-gold px-2.5 py-0.5 font-display text-sm font-bold text-gold hover:bg-gold hover:text-pitch transition-all cursor-pointer"
+                  title="Guji si aad u aragto xaadiriskaaga"
+                >
                   {schedule.dayName}
-                </span>
+                </button>
 
-                <div className="flex items-center gap-1 text-xs text-chalk font-semibold">
-                  <Clock className="h-3.5 w-3.5 text-gold" />
-                  <span>{schedule.timeText}</span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 text-xs text-chalk font-semibold">
+                    <Clock className="h-3.5 w-3.5 text-gold" />
+                    <span>{schedule.timeText}</span>
+                  </div>
+
+                  {onNavigateToTab ? (
+                    <Button
+                      variant="secondary"
+                      className="text-xs py-0.5 px-2 h-7"
+                      onClick={() => onNavigateToTab('attendance')}
+                    >
+                      Eeg Xaadiriska
+                    </Button>
+                  ) : null}
                 </div>
               </div>
 

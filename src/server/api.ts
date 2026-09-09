@@ -38,13 +38,17 @@ import {
 import {
   addFinanceEntry,
   deleteFinanceEntry,
+  getAllPlayerFeesAdmin,
   getFinanceLedger,
+  getPlayerFeeStatus,
+  recordPlayerFeePaymentAdmin,
 } from './finance.server'
 import {
   createPlayerAdmin,
   deletePlayerAdmin,
   generateUniquePlayerPin,
   getAllPlayersAdmin,
+  getMyPlayerProfile,
   getPlayerDetailAdmin,
   getRosterForLogin,
   togglePlayerActiveAdmin,
@@ -835,6 +839,92 @@ export const deleteFinanceEntryFn = createServerFn({ method: 'POST' })
     const actor = await resolveActorFromToken(data.sessionToken)
     requireAdmin(actor)
     return deleteFinanceEntry(data.id)
+  })
+
+export const getMyPlayerFeeStatusFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string; monthKey?: string }) =>
+    z
+      .object({
+        sessionToken: z.string().max(256),
+        monthKey: z
+          .string()
+          .regex(/^\d{4}-\d{2}$/)
+          .optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    const { playerId } = requirePlayer(actor)
+    return getPlayerFeeStatus(playerId, data.monthKey)
+  })
+
+export const getAllPlayerFeesAdminFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string; monthKey?: string }) =>
+    z
+      .object({
+        sessionToken: z.string().max(256),
+        monthKey: z
+          .string()
+          .regex(/^\d{4}-\d{2}$/)
+          .optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return getAllPlayerFeesAdmin(data.monthKey)
+  })
+
+export const recordPlayerFeePaymentAdminFn = createServerFn({ method: 'POST' })
+  .validator(
+    (data: {
+      sessionToken: string
+      playerId: string
+      monthKey: string
+      expectedAmount?: number
+      paidAmount: number
+      note?: string | null
+      paidAt?: string | null
+    }) =>
+      z
+        .object({
+          sessionToken: z.string().max(256),
+          playerId: z.string().uuid(),
+          monthKey: z.string().regex(/^\d{4}-\d{2}$/),
+          expectedAmount: z.number().min(0).default(10),
+          paidAmount: z.number().min(0),
+          note: z.string().max(500).optional().nullable(),
+          paidAt: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/)
+            .optional()
+            .nullable(),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return recordPlayerFeePaymentAdmin({
+      playerId: data.playerId,
+      monthKey: data.monthKey,
+      expectedAmount: data.expectedAmount,
+      paidAmount: data.paidAmount,
+      note: data.note,
+      paidAt: data.paidAt,
+    })
+  })
+
+export const getMyPlayerProfileFn = createServerFn({ method: 'POST' })
+  .validator((data: { sessionToken: string }) =>
+    z.object({ sessionToken: z.string().max(256) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    const { playerId } = requirePlayer(actor)
+    return getMyPlayerProfile(playerId)
   })
 
 /* ==================== CHAT & DIRECTORY ==================== */

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
+  CheckCircle,
   Edit,
   MapPin,
   Plus,
@@ -10,7 +11,7 @@ import {
 } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
-import { SOMALI_WEEKDAYS } from '../../lib/dates'
+import { getDateForSomaliWeekday, SOMALI_WEEKDAYS } from '../../lib/dates'
 import {
   createScheduleEntryFn,
   deleteScheduleEntryFn,
@@ -28,7 +29,11 @@ type ScheduleItem = {
   place: string
 }
 
-export function AdminScheduleTab() {
+export function AdminScheduleTab({
+  onNavigateToTab,
+}: {
+  onNavigateToTab?: (tab: string, date?: string) => void
+}) {
   const { token } = useAuth()
   const { notify } = useToast()
 
@@ -206,12 +211,22 @@ export function AdminScheduleTab() {
 
             return (
               <TicketCard key={schedule.id} className="p-4 space-y-3">
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="rounded-md bg-gold/20 border border-gold px-2.5 py-0.5 font-display text-sm font-bold text-gold">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onNavigateToTab?.(
+                            'attendance',
+                            getDateForSomaliWeekday(schedule.dayName),
+                          )
+                        }
+                        className="rounded-md bg-gold/20 border border-gold px-2.5 py-0.5 font-display text-sm font-bold text-gold hover:bg-gold hover:text-pitch transition-all cursor-pointer"
+                        title="Guji si aad xaadiris ugu qaaddo maalintan"
+                      >
                         {schedule.dayName}
-                      </span>
+                      </button>
                       <strong className="text-sm font-semibold text-chalk">
                         {schedule.timeText}
                       </strong>
@@ -222,7 +237,22 @@ export function AdminScheduleTab() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="primary"
+                      className="text-xs py-1 px-2.5 h-8 gap-1.5"
+                      onClick={() =>
+                        onNavigateToTab?.(
+                          'attendance',
+                          getDateForSomaliWeekday(schedule.dayName),
+                        )
+                      }
+                      title="U gudub xaadiriska maalintan"
+                    >
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      <span>Qaad Xaadiriska</span>
+                    </Button>
+
                     <button
                       type="button"
                       onClick={() => openEditModal(schedule)}
