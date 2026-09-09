@@ -17,10 +17,26 @@ const postgresUrl = z
     'must use the postgres:// or postgresql:// protocol',
   )
 
+function resolveBetterAuthUrl(): string {
+  const direct = env.BETTER_AUTH_URL?.trim()
+  if (direct && (direct.startsWith('http://') || direct.startsWith('https://'))) {
+    return direct
+  }
+  const netlifyUrl = env.URL?.trim() || env.DEPLOY_URL?.trim()
+  if (netlifyUrl && (netlifyUrl.startsWith('http://') || netlifyUrl.startsWith('https://'))) {
+    return netlifyUrl
+  }
+  const vercelUrl = env.VERCEL_URL?.trim()
+  if (vercelUrl) {
+    return vercelUrl.startsWith('http') ? vercelUrl : `https://${vercelUrl}`
+  }
+  return 'http://localhost:3000'
+}
+
 const serverSecretEnvironmentSchema = z.object({
   DATABASE_URL: postgresUrl,
   BETTER_AUTH_SECRET: z.string().min(32, 'must contain at least 32 characters'),
-  BETTER_AUTH_URL: z.url('must be a valid absolute URL'),
+  BETTER_AUTH_URL: z.string().url('must be a valid absolute URL'),
   SUPABASE_SERVICE_ROLE_KEY: z.string().trim().min(1, 'is required'),
 })
 
@@ -46,18 +62,20 @@ export type ServerEnvironment = {
  * environment variables per request.
  */
 export function getServerEnv(): ServerEnvironment {
+  const resolvedAuthUrl = resolveBetterAuthUrl()
+
   const result = serverEnvironmentSchema.safeParse({
     secrets: {
       DATABASE_URL: env.DATABASE_URL,
       BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET,
-      BETTER_AUTH_URL: env.BETTER_AUTH_URL,
+      BETTER_AUTH_URL: resolvedAuthUrl,
       SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY,
     },
     public: {
       SUPABASE_URL: env.SUPABASE_URL || env.VITE_SUPABASE_URL,
       SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY,
       VITE_APP_URL:
-        env.VITE_APP_URL || env.BETTER_AUTH_URL || 'http://localhost:3000',
+        env.VITE_APP_URL || resolvedAuthUrl || 'http://localhost:3000',
     },
   })
 
