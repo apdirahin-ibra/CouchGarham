@@ -4,3 +4,4 @@
 
 [build.environment]
   NITRO_PRESET = "netlify"
+  NPM_FLAGS = "--include=dev"
