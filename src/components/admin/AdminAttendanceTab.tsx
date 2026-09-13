@@ -5,6 +5,7 @@ import {
   Clock,
   RefreshCw,
   Save,
+  ShieldCheck,
   XCircle,
 } from 'lucide-react'
 
@@ -161,6 +162,60 @@ export function AdminAttendanceTab({
     }
   }
 
+  const handleExcuseToggle = async (playerId: string) => {
+    if (!token) return
+    const player = roster.find((r) => r.playerId === playerId)
+    if (!player) return
+
+    setSavingPlayerId(playerId)
+    const isCurrentlyExcused = Boolean(player.reason?.trim())
+    const nextReason = isCurrentlyExcused ? '' : 'Cudurdaar la aqbalay (Excused)'
+    const nextStatus =
+      player.status === 'xadir' || !player.status ? 'maqan' : player.status
+
+    setRoster((current) =>
+      current.map((item) =>
+        item.playerId === playerId
+          ? {
+              ...item,
+              status: nextStatus,
+              reason: nextReason,
+            }
+          : item,
+      ),
+    )
+
+    try {
+      await saveAttendanceStatusFn({
+        data: {
+          sessionToken: token,
+          playerId,
+          date: selectedDate,
+          status: nextStatus,
+        },
+      })
+      await saveAttendanceReasonFn({
+        data: {
+          sessionToken: token,
+          playerId,
+          date: selectedDate,
+          reason: nextReason,
+        },
+      })
+      notify(
+        isCurrentlyExcused
+          ? 'Cudurdaarkii waa laga saaray'
+          : 'Cudurdaarka si toos ah ayaa loo diiwaangeliyay',
+        'success',
+      )
+    } catch (err: any) {
+      notify(err?.message || 'Qalad ayaa dhacay keydinta cudurdaarka', 'danger')
+      loadAttendance(selectedDate)
+    } finally {
+      setSavingPlayerId(null)
+    }
+  }
+
   const handleSaveAll = () => {
     notify(
       'Dhammaan xaadiriska maalinta waa la xaqiijiyay oo la keydiyay!',
@@ -172,6 +227,7 @@ export function AdminAttendanceTab({
     xadir: roster.filter((r) => r.status === 'xadir').length,
     maqan: roster.filter((r) => r.status === 'maqan').length,
     daahay: roster.filter((r) => r.status === 'daahay').length,
+    cudurdaar: roster.filter((r) => Boolean(r.reason?.trim())).length,
     unrecorded: roster.filter((r) => !r.status).length,
   }
 
@@ -197,36 +253,44 @@ export function AdminAttendanceTab({
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center">
-        <div className="rounded-lg border border-success/40 bg-surface p-1.5 sm:p-2 flex flex-col items-center justify-center">
-          <span className="block text-[0.625rem] font-bold uppercase text-success">
+      <div className="grid grid-cols-5 gap-1 sm:gap-2 text-center">
+        <div className="rounded-lg border border-success/40 bg-surface p-1 sm:p-2 flex flex-col items-center justify-center">
+          <span className="block text-[0.5625rem] sm:text-[0.625rem] font-bold uppercase text-success">
             Xadir
           </span>
-          <strong className="block my-0.5 font-display text-lg sm:text-xl text-chalk leading-none">
+          <strong className="block my-0.5 font-display text-base sm:text-xl text-chalk leading-none">
             {summary.xadir}
           </strong>
         </div>
-        <div className="rounded-lg border border-danger/40 bg-surface p-1.5 sm:p-2 flex flex-col items-center justify-center">
-          <span className="block text-[0.625rem] font-bold uppercase text-danger">
+        <div className="rounded-lg border border-danger/40 bg-surface p-1 sm:p-2 flex flex-col items-center justify-center">
+          <span className="block text-[0.5625rem] sm:text-[0.625rem] font-bold uppercase text-danger">
             Maqan
           </span>
-          <strong className="block my-0.5 font-display text-lg sm:text-xl text-chalk leading-none">
+          <strong className="block my-0.5 font-display text-base sm:text-xl text-chalk leading-none">
             {summary.maqan}
           </strong>
         </div>
-        <div className="rounded-lg border border-warning/40 bg-surface p-1.5 sm:p-2 flex flex-col items-center justify-center">
-          <span className="block text-[0.625rem] font-bold uppercase text-warning">
+        <div className="rounded-lg border border-warning/40 bg-surface p-1 sm:p-2 flex flex-col items-center justify-center">
+          <span className="block text-[0.5625rem] sm:text-[0.625rem] font-bold uppercase text-warning">
             Daahay
           </span>
-          <strong className="block my-0.5 font-display text-lg sm:text-xl text-chalk leading-none">
+          <strong className="block my-0.5 font-display text-base sm:text-xl text-chalk leading-none">
             {summary.daahay}
           </strong>
         </div>
-        <div className="rounded-lg border border-club-border bg-surface p-1.5 sm:p-2 flex flex-col items-center justify-center">
-          <span className="block text-[0.625rem] font-bold uppercase text-chalk-dim">
+        <div className="rounded-lg border border-gold/40 bg-surface p-1 sm:p-2 flex flex-col items-center justify-center">
+          <span className="block text-[0.5625rem] sm:text-[0.625rem] font-bold uppercase text-gold">
+            Cudurdaar
+          </span>
+          <strong className="block my-0.5 font-display text-base sm:text-xl text-chalk leading-none">
+            {summary.cudurdaar}
+          </strong>
+        </div>
+        <div className="rounded-lg border border-club-border bg-surface p-1 sm:p-2 flex flex-col items-center justify-center">
+          <span className="block text-[0.5625rem] sm:text-[0.625rem] font-bold uppercase text-chalk-dim">
             Haray
           </span>
-          <strong className="block my-0.5 font-display text-lg sm:text-xl text-chalk leading-none">
+          <strong className="block my-0.5 font-display text-base sm:text-xl text-chalk leading-none">
             {summary.unrecorded}
           </strong>
         </div>
@@ -258,8 +322,11 @@ export function AdminAttendanceTab({
         <div className="space-y-3">
           {roster.map((player) => {
             const isSaving = savingPlayerId === player.playerId
+            const hasExcuse = Boolean(player.reason?.trim())
             const showReasonField =
-              player.status === 'maqan' || player.status === 'daahay'
+              player.status === 'maqan' ||
+              player.status === 'daahay' ||
+              hasExcuse
 
             return (
               <TicketCard key={player.playerId} className="p-3.5 space-y-3">
@@ -284,6 +351,18 @@ export function AdminAttendanceTab({
                     <span className="text-xs text-gold animate-pulse">
                       Keydinaya...
                     </span>
+                  ) : hasExcuse ? (
+                    <StatusBadge
+                      tone="warning"
+                      className="capitalize text-xs font-bold flex items-center gap-1 border-gold/40 text-gold bg-gold/15"
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5 text-gold" />
+                      <span>
+                        {player.status === 'daahay'
+                          ? 'Daahay (Cudurdaar)'
+                          : 'Cudurdaartay'}
+                      </span>
+                    </StatusBadge>
                   ) : player.status ? (
                     <StatusBadge
                       tone={
@@ -304,11 +383,11 @@ export function AdminAttendanceTab({
                   )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => handleStatusChange(player.playerId, 'xadir')}
-                    className={`flex h-11 items-center justify-center gap-1.5 rounded-lg border font-display text-sm font-bold transition-all cursor-pointer ${
+                    className={`flex h-11 items-center justify-center gap-1.5 rounded-lg border font-display text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                       player.status === 'xadir'
                         ? 'border-success bg-success/30 text-chalk shadow-md ring-1 ring-success'
                         : 'border-club-border bg-surface-raised text-chalk-dim hover:border-success/50 hover:text-chalk'
@@ -321,8 +400,8 @@ export function AdminAttendanceTab({
                   <button
                     type="button"
                     onClick={() => handleStatusChange(player.playerId, 'maqan')}
-                    className={`flex h-11 items-center justify-center gap-1.5 rounded-lg border font-display text-sm font-bold transition-all cursor-pointer ${
-                      player.status === 'maqan'
+                    className={`flex h-11 items-center justify-center gap-1.5 rounded-lg border font-display text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                      player.status === 'maqan' && !hasExcuse
                         ? 'border-danger bg-danger/30 text-chalk shadow-md ring-1 ring-danger'
                         : 'border-club-border bg-surface-raised text-chalk-dim hover:border-danger/50 hover:text-chalk'
                     }`}
@@ -336,7 +415,7 @@ export function AdminAttendanceTab({
                     onClick={() =>
                       handleStatusChange(player.playerId, 'daahay')
                     }
-                    className={`flex h-11 items-center justify-center gap-1.5 rounded-lg border font-display text-sm font-bold transition-all cursor-pointer ${
+                    className={`flex h-11 items-center justify-center gap-1.5 rounded-lg border font-display text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                       player.status === 'daahay'
                         ? 'border-warning bg-warning/30 text-chalk shadow-md ring-1 ring-warning'
                         : 'border-club-border bg-surface-raised text-chalk-dim hover:border-warning/50 hover:text-chalk'
@@ -344,6 +423,22 @@ export function AdminAttendanceTab({
                   >
                     <Clock className="h-4 w-4 text-warning" />
                     <span>Daahay</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleExcuseToggle(player.playerId)}
+                    className={`flex h-11 items-center justify-center gap-1.5 rounded-lg border font-display text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                      hasExcuse
+                        ? 'border-gold bg-gold/25 text-chalk shadow-md ring-1 ring-gold'
+                        : 'border-club-border bg-surface-raised text-chalk-dim hover:border-gold/50 hover:text-chalk'
+                    }`}
+                    title="Geli ama ka saar cudurdaarka"
+                  >
+                    <ShieldCheck
+                      className={`h-4 w-4 ${hasExcuse ? 'text-gold' : 'text-chalk-dim'}`}
+                    />
+                    <span>Cudurdaar</span>
                   </button>
                 </div>
 
@@ -356,7 +451,7 @@ export function AdminAttendanceTab({
                         handleReasonChange(player.playerId, e.target.value)
                       }
                       onBlur={() => handleReasonBlur(player.playerId)}
-                      placeholder={`Geli sababta ${player.status === 'maqan' ? 'maqnaanshaha' : 'dib-u-dhaca'}...`}
+                      placeholder="Geli ama beddel sababta cudurdaarka / maqnaanshaha..."
                       className="ui-input h-9 text-xs"
                     />
                   </div>

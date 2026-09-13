@@ -389,6 +389,10 @@ export async function getPlayerDashboardSummary(playerId: string) {
     ratingsHistory,
     attendanceHistory,
     feeStatus,
+    latestChatRecord,
+    topTipRecord,
+    latestPhotoRecord,
+    playerRecord,
   ] = await Promise.all([
     getClubSettings(),
     getPlayerMonthlyStats(playerId),
@@ -398,6 +402,26 @@ export async function getPlayerDashboardSummary(playerId: string) {
     getPlayerMatchRatingsHistory(playerId),
     getPlayerAttendanceHistory(playerId),
     getPlayerFeeStatus(playerId, currentMonth),
+    getDatabase()
+      .select()
+      .from(chatMessages)
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(1),
+    getDatabase()
+      .select()
+      .from(tips)
+      .orderBy(tips.sortOrder, desc(tips.createdAt))
+      .limit(1),
+    getDatabase()
+      .select()
+      .from(galleryPhotos)
+      .orderBy(desc(galleryPhotos.createdAt))
+      .limit(1),
+    getDatabase()
+      .select()
+      .from(players)
+      .where(eq(players.id, playerId))
+      .limit(1),
   ])
 
   const usedThisMonth = leaves.filter(
@@ -413,6 +437,42 @@ export async function getPlayerDashboardSummary(playerId: string) {
   )
 
   const myTodayRecord = todayAttendance.find((p) => p.playerId === playerId)
+  const currentPlayerData = playerRecord[0] ?? null
+
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://supabase.co'
+  const latestPhoto = latestPhotoRecord[0]
+    ? {
+        caption: latestPhotoRecord[0].caption,
+        url:
+          latestPhotoRecord[0].storagePath.startsWith('http://') ||
+          latestPhotoRecord[0].storagePath.startsWith('https://')
+            ? latestPhotoRecord[0].storagePath
+            : `${supabaseUrl}/storage/v1/object/public/${latestPhotoRecord[0].storageBucket}/${latestPhotoRecord[0].storagePath}`,
+      }
+    : null
+
+  const latestChatMessage = latestChatRecord[0]
+    ? {
+        authorName: latestChatRecord[0].authorNameSnapshot,
+        authorRole: latestChatRecord[0].authorRole,
+        text: latestChatRecord[0].text,
+        createdAt: latestChatRecord[0].createdAt,
+      }
+    : null
+
+  const topTip = topTipRecord[0]
+    ? { text: topTipRecord[0].text }
+    : {
+        text: 'Joogteynta tababarka iyo dadaalka joogtada ah waa furaha guusha garoonka.',
+      }
+
+  const keyRule = settings.rulesText
+    ? settings.rulesText
+        .split('\n')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 5)[0] ||
+      'Ixtiraamka waqtiga, macallinka, iyo asxaabta kooxda waa waajib muqadas ah.'
+    : 'Ixtiraamka waqtiga, macallinka, iyo asxaabta kooxda waa waajib muqadas ah.'
 
   return {
     today,
@@ -420,6 +480,14 @@ export async function getPlayerDashboardSummary(playerId: string) {
     announcement: settings.announcementText,
     announcementAudio: settings.announcementAudioPath,
     announcementAudioPath: settings.announcementAudioPath,
+    player: currentPlayerData
+      ? {
+          id: currentPlayerData.id,
+          name: currentPlayerData.name,
+          jerseyNumber: currentPlayerData.jerseyNumber,
+          position: currentPlayerData.position,
+        }
+      : null,
     myTodayStatus: myTodayRecord?.status ?? null,
     myTodayReason: myTodayRecord?.reason ?? null,
     stats: monthStats,
@@ -431,5 +499,9 @@ export async function getPlayerDashboardSummary(playerId: string) {
     ratingAverage: ratingsHistory.averageRating,
     totalRatingsCount: ratingsHistory.totalMatches,
     ratingHistoryList: ratingsHistory.ratings,
+    latestChatMessage,
+    topTip,
+    keyRule,
+    latestPhoto,
   }
 }

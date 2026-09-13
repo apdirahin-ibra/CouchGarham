@@ -41,7 +41,9 @@ import {
   getAllPlayerFeesAdmin,
   getFinanceLedger,
   getPlayerFeeStatus,
+  quickTogglePlayerFeeAdmin,
   recordPlayerFeePaymentAdmin,
+  setMonthlyFeeConfigAdmin,
 } from './finance.server'
 import {
   createPlayerAdmin,
@@ -914,6 +916,63 @@ export const recordPlayerFeePaymentAdminFn = createServerFn({ method: 'POST' })
       paidAmount: data.paidAmount,
       note: data.note,
       paidAt: data.paidAt,
+    })
+  })
+
+export const setMonthlyFeeConfigAdminFn = createServerFn({ method: 'POST' })
+  .validator(
+    (data: {
+      sessionToken: string
+      monthKey?: string
+      expectedAmount: number
+    }) =>
+      z
+        .object({
+          sessionToken: z.string().max(256),
+          monthKey: z
+            .string()
+            .regex(/^\d{4}-\d{2}$/)
+            .optional(),
+          expectedAmount: z.number().min(0),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return setMonthlyFeeConfigAdmin({
+      monthKey: data.monthKey,
+      expectedAmount: data.expectedAmount,
+    })
+  })
+
+export const quickTogglePlayerFeeAdminFn = createServerFn({ method: 'POST' })
+  .validator(
+    (data: {
+      sessionToken: string
+      playerId: string
+      monthKey?: string
+      action: 'paid' | 'unpaid'
+    }) =>
+      z
+        .object({
+          sessionToken: z.string().max(256),
+          playerId: z.string().uuid(),
+          monthKey: z
+            .string()
+            .regex(/^\d{4}-\d{2}$/)
+            .optional(),
+          action: z.enum(['paid', 'unpaid']),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return quickTogglePlayerFeeAdmin({
+      playerId: data.playerId,
+      monthKey: data.monthKey,
+      action: data.action,
     })
   })
 

@@ -4,16 +4,20 @@ import {
   Award,
   Bell,
   Calendar,
+  Camera,
   CheckCircle,
   ChevronRight,
   Clock,
   DollarSign,
-  FileText,
   History,
   Info,
+  Lightbulb,
+  MessageSquare,
   Pause,
   Play,
   RefreshCw,
+  ShieldCheck,
+  Sparkles,
   Star,
   User,
   Volume2,
@@ -30,7 +34,10 @@ import {
   computeOverallRatingScore,
   PLAYER_RATING_CRITERIA,
 } from '../../lib/ratings'
-import { getPlayerDashboardSummaryFn } from '../../server/api'
+import {
+  getPlayerDashboardSummaryFn,
+  submitExcuseRequestFn,
+} from '../../server/api'
 import {
   Button,
   Dialog,
@@ -40,6 +47,7 @@ import {
   StatusBadge,
   TicketCard,
 } from '../ui'
+import { useToast } from '../ui/toast-context'
 import { PlayerProfileModal } from './PlayerProfileModal'
 
 const CACHED_PLAYER_DASHBOARD_KEY = 'best_official_cached_player_dashboard'
@@ -74,7 +82,39 @@ export function PlayerDashboardTab({
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showAttendanceDetailsModal, setShowAttendanceDetailsModal] =
     useState(false)
+  const { notify } = useToast()
+  const [isExcuseModalOpen, setIsExcuseModalOpen] = useState(false)
+  const [excuseType, setExcuseType] = useState<'maqan' | 'daahay'>('maqan')
+  const [excuseReason, setExcuseReason] = useState('')
+  const [isSubmittingExcuse, setIsSubmittingExcuse] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  const handleSubmitExcuse = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!token || !excuseReason.trim()) return
+    setIsSubmittingExcuse(true)
+    try {
+      await submitExcuseRequestFn({
+        data: {
+          sessionToken: token,
+          requestDate: today,
+          attendanceType: excuseType,
+          reason: excuseReason.trim(),
+        },
+      })
+      notify(
+        'Cudurdaarkaaga si guul leh ayaa loo gudbiyay, macallinka ayaa eegi doona!',
+        'success',
+      )
+      setIsExcuseModalOpen(false)
+      setExcuseReason('')
+      loadDashboard()
+    } catch (err: any) {
+      notify(err?.message || 'Qalad ayaa dhacay gudbinta cudurdaarka', 'danger')
+    } finally {
+      setIsSubmittingExcuse(false)
+    }
+  }
 
   const loadDashboard = useCallback(() => {
     if (!token) return
@@ -178,23 +218,29 @@ export function PlayerDashboardTab({
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-gold/30 bg-surface-raised p-4 shadow-md">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gold">
-            <Calendar className="h-4 w-4" />
-            <span>Taariikhda Maanta</span>
+      {/* Header Pass Card */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-gold/40 bg-gradient-to-r from-surface-raised via-pitch-deep to-surface-raised p-4 shadow-lg relative overflow-hidden">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gold/15 text-gold border border-gold/40 font-display text-lg font-bold shadow-inner">
+            #{dashboard?.player?.jerseyNumber ?? '⚽'}
           </div>
-          <h2 className="mt-1 font-display text-2xl font-bold text-chalk">
-            {formattedToday}
-          </h2>
-          <span className="text-xs font-semibold text-gold">
-            Ku soo dhowow, {user?.name || 'Ciyaartoy'}!
-          </span>
+          <div>
+            <div className="flex items-center gap-2 text-[0.6875rem] font-bold uppercase tracking-widest text-gold">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>{formattedToday}</span>
+            </div>
+            <h2 className="mt-0.5 font-display text-xl sm:text-2xl font-bold text-chalk">
+              Ku soo dhowow, {user?.name || 'Ciyaartoy'}!
+            </h2>
+            <span className="text-xs text-chalk-dim">
+              Best Official Football Club • Xubin Firfircoon
+            </span>
+          </div>
         </div>
 
         <Button
           variant="secondary"
-          className="self-start sm:self-auto text-xs py-1.5 px-3 gap-1.5 border-gold/40 text-gold hover:bg-gold/20"
+          className="self-start sm:self-auto text-xs py-2 px-3.5 gap-1.5 border-gold/40 text-gold hover:bg-gold/20 font-bold"
           onClick={() => setShowProfileModal(true)}
         >
           <User className="h-3.5 w-3.5" />
@@ -202,6 +248,148 @@ export function PlayerDashboardTab({
         </Button>
       </div>
 
+      {/* Feed-ka Sare ee la Shuushuteynayo (Featured Stories & Highlights Carousel) */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-1.5 text-gold">
+            <Sparkles className="h-4 w-4" />
+            <span className="text-[0.6875rem] font-bold uppercase tracking-wider">
+              Xogaha Degdegga ah & Fariimaha
+            </span>
+          </div>
+          <span className="text-[0.625rem] text-chalk-dim italic">
+            Dhanka bidix u shuushutee ➔
+          </span>
+        </div>
+
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x snap-mandatory -mx-1 px-1">
+          {/* Card 1: Wada Hadalka Kooxda */}
+          <div
+            onClick={() => onNavigateToTab('chat')}
+            className="shrink-0 w-64 sm:w-72 snap-start rounded-2xl border border-gold/30 bg-gradient-to-br from-surface-raised via-pitch-deep to-surface p-4 shadow-md hover:border-gold transition-all cursor-pointer group flex flex-col justify-between relative overflow-hidden"
+          >
+            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-gold/5 rounded-full blur-xl pointer-events-none" />
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-gold">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Wadahadalka Kooxda</span>
+                </span>
+                <span className="text-[0.625rem] text-gold bg-gold/15 px-2 py-0.5 rounded-full font-bold">
+                  Fariin
+                </span>
+              </div>
+              <p className="text-xs text-chalk line-clamp-2 italic font-medium leading-relaxed">
+                "{dashboard?.latestChatMessage?.text || 'Kusoo dhowaada wadahadalka kooxda...'}"
+              </p>
+            </div>
+            <div className="mt-3 pt-2 border-t border-club-border/60 flex items-center justify-between text-[0.6875rem]">
+              <span className="text-chalk-dim truncate font-semibold">
+                👤 {dashboard?.latestChatMessage?.authorName || 'Kooxda'}
+              </span>
+              <span className="text-gold font-bold flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
+                <span>Wadahadal</span>
+                <ChevronRight className="h-3 w-3" />
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: Waanada & Dardaaranka */}
+          <div
+            onClick={() => onNavigateToTab('tips')}
+            className="shrink-0 w-64 sm:w-72 snap-start rounded-2xl border border-gold/30 bg-gradient-to-br from-surface-raised via-pitch-deep to-surface p-4 shadow-md hover:border-gold transition-all cursor-pointer group flex flex-col justify-between relative overflow-hidden"
+          >
+            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-gold/5 rounded-full blur-xl pointer-events-none" />
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-gold">
+                  <Lightbulb className="h-4 w-4" />
+                  <span>Waanada Macallinka</span>
+                </span>
+                <span className="text-[0.625rem] text-gold bg-gold/15 px-2 py-0.5 rounded-full font-bold">
+                  Talada Maanta
+                </span>
+              </div>
+              <p className="text-xs text-chalk line-clamp-2 font-medium leading-relaxed">
+                "{dashboard?.topTip?.text || 'Joogteynta tababarka iyo anshaxa waa furaha guusha.'}"
+              </p>
+            </div>
+            <div className="mt-3 pt-2 border-t border-club-border/60 flex items-center justify-between text-[0.6875rem]">
+              <span className="text-chalk-dim font-semibold">
+                💡 100 Talo Kooxeed
+              </span>
+              <span className="text-gold font-bold flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
+                <span>Eeg Waano</span>
+                <ChevronRight className="h-3 w-3" />
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: Sharciyada & Xeerka Dahabiga ah */}
+          <div
+            onClick={() => onNavigateToTab('rules')}
+            className="shrink-0 w-64 sm:w-72 snap-start rounded-2xl border border-gold/30 bg-gradient-to-br from-surface-raised via-pitch-deep to-surface p-4 shadow-md hover:border-gold transition-all cursor-pointer group flex flex-col justify-between relative overflow-hidden"
+          >
+            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-gold/5 rounded-full blur-xl pointer-events-none" />
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-gold">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Xeerka Kooxda</span>
+                </span>
+                <span className="text-[0.625rem] text-gold bg-gold/15 px-2 py-0.5 rounded-full font-bold">
+                  Qaanuunka
+                </span>
+              </div>
+              <p className="text-xs text-chalk line-clamp-2 font-medium leading-relaxed">
+                "{dashboard?.keyRule || 'Ixtiraamka waqtiga, macallinka, iyo asxaabta kooxda waa waajib muqadas ah.'}"
+              </p>
+            </div>
+            <div className="mt-3 pt-2 border-t border-club-border/60 flex items-center justify-between text-[0.6875rem]">
+              <span className="text-chalk-dim font-semibold">
+                📜 Shuruucda Naadiga
+              </span>
+              <span className="text-gold font-bold flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
+                <span>Akhri Xeerka</span>
+                <ChevronRight className="h-3 w-3" />
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4: Sawirrada Garoonka */}
+          <div
+            onClick={() => onNavigateToTab('gallery')}
+            className="shrink-0 w-64 sm:w-72 snap-start rounded-2xl border border-gold/30 bg-gradient-to-br from-surface-raised via-pitch-deep to-surface p-4 shadow-md hover:border-gold transition-all cursor-pointer group flex flex-col justify-between relative overflow-hidden"
+          >
+            <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-gold/5 rounded-full blur-xl pointer-events-none" />
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="flex items-center gap-1.5 text-xs font-bold text-gold">
+                  <Camera className="h-4 w-4" />
+                  <span>Sawirrada Kooxda</span>
+                </span>
+                <span className="text-[0.625rem] text-gold bg-gold/15 px-2 py-0.5 rounded-full font-bold">
+                  Garoonka
+                </span>
+              </div>
+              <p className="text-xs text-chalk line-clamp-2 font-medium leading-relaxed">
+                {dashboard?.latestPhoto?.caption || 'Muuqaallada iyo sawirrada tababarrada naadiga.'}
+              </p>
+            </div>
+            <div className="mt-3 pt-2 border-t border-club-border/60 flex items-center justify-between text-[0.6875rem]">
+              <span className="text-chalk-dim font-semibold">
+                📸 Sawirrada Naadiga
+              </span>
+              <span className="text-gold font-bold flex items-center gap-0.5 group-hover:translate-x-1 transition-transform">
+                <span>Gal Sawirrada</span>
+                <ChevronRight className="h-3 w-3" />
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ogeysiiska Kooxda */}
       <TicketCard className="border-gold/40 p-3.5 sm:p-4 space-y-3">
         <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2 text-gold">
@@ -214,7 +402,7 @@ export function PlayerDashboardTab({
           {announcementAudioPath ? (
             <Button
               variant="secondary"
-              className="h-8 px-2.5 text-xs gap-1.5 self-start sm:self-auto text-gold border-gold/40 hover:bg-gold/20"
+              className="h-8 px-2.5 text-xs gap-1.5 self-start sm:self-auto text-gold border-gold/40 hover:bg-gold/20 font-bold"
               onClick={handleToggleVoice}
             >
               {isPlayingAudio ? (
@@ -248,46 +436,62 @@ export function PlayerDashboardTab({
         ) : null}
       </TicketCard>
 
-      <TicketCard className="p-4 space-y-3">
-        <SectionTitle eyebrow="XAALADDAADA MAANTA" as="h3">
-          Xaadiriskaaga Maanta
-        </SectionTitle>
+      {/* Xaadiriskaaga Maanta Card */}
+      <TicketCard className="p-4 space-y-3.5 border-gold/30">
+        <div className="flex items-center justify-between">
+          <SectionTitle eyebrow="XAALADDAADA MAANTA" as="h3">
+            Xaadiriskaaga Maanta
+          </SectionTitle>
+          <span className="text-xs text-chalk-dim">{formattedToday}</span>
+        </div>
 
-        <div className="flex items-center justify-between rounded-lg border border-club-border bg-surface-raised p-3">
+        <div className="flex items-center justify-between rounded-xl border border-club-border bg-surface-raised p-3.5">
           <div className="flex items-center gap-3">
             {myTodayStatus === 'xadir' ? (
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/20 text-success">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-success/20 text-success border border-success/30">
                 <CheckCircle className="h-6 w-6" />
               </div>
+            ) : myTodayReason ? (
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gold/20 text-gold border border-gold/40">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
             ) : myTodayStatus === 'maqan' ? (
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-danger/20 text-danger">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-danger/20 text-danger border border-danger/30">
                 <XCircle className="h-6 w-6" />
               </div>
             ) : myTodayStatus === 'daahay' ? (
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/20 text-warning">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-warning/20 text-warning border border-warning/30">
                 <Clock className="h-6 w-6" />
               </div>
             ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface text-chalk-dim">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface text-chalk-dim border border-club-border">
                 <AlertCircle className="h-6 w-6" />
               </div>
             )}
 
             <div>
-              <strong className="block text-base font-bold text-chalk capitalize">
-                {myTodayStatus
-                  ? `Waad ${myTodayStatus} Tahay`
-                  : 'Weli Lama Qaadin'}
+              <strong className="block text-base font-bold text-chalk">
+                {myTodayStatus === 'xadir'
+                  ? 'Xaadir (Waad Joogtay) ✅'
+                  : myTodayReason
+                    ? `${myTodayStatus === 'daahay' ? 'Daahay' : 'Maqan'} (Cudurdaartay) 🛡️`
+                    : myTodayStatus === 'maqan'
+                      ? 'Maqan (Kama Qaybgelin) ❌'
+                      : myTodayStatus === 'daahay'
+                        ? 'Soo Daahay ⏱️'
+                        : 'Weli Lama Qaadin ⚪'}
               </strong>
               {myTodayReason ? (
-                <span className="text-xs text-gold">
-                  Sabab: {myTodayReason}
+                <span className="text-xs text-gold block mt-0.5 font-semibold">
+                  🛡️ Cudurdaar: {myTodayReason}
                 </span>
               ) : (
-                <span className="text-xs text-chalk-dim">
+                <span className="text-xs text-chalk-dim block mt-0.5">
                   {myTodayStatus === 'xadir'
-                    ? 'Waad ku mahadsantahay imaatinka'
-                    : 'Xaadiriska tababarka maanta'}
+                    ? 'Waad ku mahadsantahay imaatinka tababarka'
+                    : myTodayStatus === 'maqan'
+                      ? 'Haddii aad cudurdaar leedahay, fadlan geli sababta hoose'
+                      : 'Xaadiriska tababarka iyo kulanka maanta'}
                 </span>
               )}
             </div>
@@ -297,15 +501,25 @@ export function PlayerDashboardTab({
             tone={
               myTodayStatus === 'xadir'
                 ? 'success'
-                : myTodayStatus === 'maqan'
-                  ? 'danger'
-                  : myTodayStatus === 'daahay'
-                    ? 'warning'
-                    : 'neutral'
+                : myTodayReason
+                  ? 'warning'
+                  : myTodayStatus === 'maqan'
+                    ? 'danger'
+                    : myTodayStatus === 'daahay'
+                      ? 'warning'
+                      : 'neutral'
             }
-            className="capitalize text-xs font-bold"
+            className="text-xs font-bold py-1 px-2.5"
           >
-            {myTodayStatus ?? 'Haray'}
+            {myTodayStatus === 'xadir'
+              ? 'Xaadir'
+              : myTodayReason
+                ? 'Cudurdaartay'
+                : myTodayStatus === 'maqan'
+                  ? 'Maqan'
+                  : myTodayStatus === 'daahay'
+                    ? 'Daahay'
+                    : 'Aan La Qaadin'}
           </StatusBadge>
         </div>
 
@@ -313,15 +527,15 @@ export function PlayerDashboardTab({
           <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-club-border/60">
             <Button
               variant="secondary"
-              className="text-xs py-1.5 px-3 gap-1.5"
-              onClick={() => onNavigateToTab('attendance')}
+              className="text-xs py-1.5 px-3 gap-1.5 border-gold/40 text-gold hover:bg-gold/15 font-bold"
+              onClick={() => setIsExcuseModalOpen(true)}
             >
-              <FileText className="h-3.5 w-3.5" />
+              <ShieldCheck className="h-3.5 w-3.5" />
               <span>Cudurdaar Geli</span>
             </Button>
             <Button
               variant="secondary"
-              className="text-xs py-1.5 px-3 gap-1.5 border-gold/40 text-gold hover:bg-gold/10"
+              className="text-xs py-1.5 px-3 gap-1.5 border-club-border text-chalk hover:bg-surface-raised"
               onClick={() => onNavigateToTab('leaves')}
             >
               <Calendar className="h-3.5 w-3.5" />
@@ -446,59 +660,59 @@ export function PlayerDashboardTab({
       </TicketCard>
 
       {/* Xaaladdaada Lacagta Bishan */}
-      <TicketCard className="p-4 space-y-3 border-gold/30">
+      <TicketCard className="p-4 space-y-3.5 border-gold/30">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold/10 text-gold border border-gold/30">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold border border-gold/30">
               <DollarSign className="h-5 w-5" />
             </div>
             <div>
               <SectionTitle eyebrow="LACAGTA BISHAN" as="h3">
-                Xaaladdaada Lacagta
+                Xaaladdaada Lacagta Bishan
               </SectionTitle>
               <span className="text-xs text-chalk-dim">
-                Bishan: {currentMonth}
+                Bishan: {currentMonth} • Khidmadda xisaabta naadiga
               </span>
             </div>
           </div>
 
           <StatusBadge
             tone={feeStatus?.status === 'paid' ? 'success' : 'danger'}
-            className="text-xs font-bold self-start sm:self-auto"
+            className="text-xs font-bold py-1 px-3 self-start sm:self-auto"
           >
             {feeStatus?.status === 'paid'
-              ? 'Wuu Dhiibay'
-              : `Waa Lagu Leeyahay: $${(feeStatus?.debt ?? 10).toFixed(2)}`}
+              ? 'Wuu Dhiibay ✅'
+              : `Waa Lagu Leeyahay: $${(feeStatus?.debt ?? 0.5).toFixed(2)} ❌`}
           </StatusBadge>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 text-center pt-1">
-          <div className="rounded-lg border border-club-border bg-pitch-deep p-2.5">
+        <div className="grid grid-cols-3 gap-2.5 text-center pt-1">
+          <div className="rounded-xl border border-club-border bg-pitch-deep p-3">
             <span className="block text-[0.6875rem] text-chalk-dim uppercase font-bold">
               Lagaa rabo
             </span>
-            <strong className="text-base font-bold text-chalk">
-              ${(feeStatus?.expectedAmount ?? 10).toFixed(2)}
+            <strong className="text-base sm:text-lg font-bold text-chalk">
+              ${(feeStatus?.expectedAmount ?? 0.5).toFixed(2)}
             </strong>
           </div>
-          <div className="rounded-lg border border-club-border bg-pitch-deep p-2.5">
-            <span className="block text-[0.6875rem] text-chalk-dim uppercase font-bold">
+          <div className="rounded-xl border border-success/30 bg-pitch-deep p-3">
+            <span className="block text-[0.6875rem] text-success uppercase font-bold">
               Aad dhiibtay
             </span>
-            <strong className="text-base font-bold text-success">
+            <strong className="text-base sm:text-lg font-bold text-success">
               ${(feeStatus?.paidAmount ?? 0).toFixed(2)}
             </strong>
           </div>
-          <div className="rounded-lg border border-club-border bg-pitch-deep p-2.5">
+          <div className="rounded-xl border border-club-border bg-pitch-deep p-3">
             <span className="block text-[0.6875rem] text-chalk-dim uppercase font-bold">
               Lagu leeyahay
             </span>
             <strong
-              className={`text-base font-bold ${
-                (feeStatus?.debt ?? 10) > 0 ? 'text-danger' : 'text-gold'
+              className={`text-base sm:text-lg font-bold ${
+                (feeStatus?.debt ?? 0.5) > 0 ? 'text-danger' : 'text-gold'
               }`}
             >
-              ${(feeStatus?.debt ?? 10).toFixed(2)}
+              ${(feeStatus?.debt ?? 0.5).toFixed(2)}
             </strong>
           </div>
         </div>
@@ -778,6 +992,85 @@ export function PlayerDashboardTab({
         onClose={() => setShowProfileModal(false)}
         onNavigateToTab={onNavigateToTab}
       />
+
+      {/* Cudurdaar Geli Modal */}
+      <Dialog
+        open={isExcuseModalOpen}
+        onClose={() => setIsExcuseModalOpen(false)}
+        title="Geli Cudurdaar Maanta"
+      >
+        <form onSubmit={handleSubmitExcuse} className="space-y-4">
+          <p className="text-xs text-chalk-dim">
+            Fadlan u sheeg macallinka sababta aad ku maqantahay ama aad ugu daahday tababarka/kulanka maanta ({formattedToday}).
+          </p>
+
+          <div>
+            <label className="block text-xs font-semibold text-chalk-dim mb-1.5">
+              Nooca Cudurdaarka
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setExcuseType('maqan')}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
+                  excuseType === 'maqan'
+                    ? 'border-danger/60 bg-danger/15 text-danger'
+                    : 'border-club-border bg-surface text-chalk-dim hover:bg-surface-raised'
+                }`}
+              >
+                <XCircle className="h-4 w-4" />
+                <span>Waan Maqanahay</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setExcuseType('daahay')}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
+                  excuseType === 'daahay'
+                    ? 'border-warning/60 bg-warning/15 text-warning'
+                    : 'border-club-border bg-surface text-chalk-dim hover:bg-surface-raised'
+                }`}
+              >
+                <Clock className="h-4 w-4" />
+                <span>Waan Daahayaa</span>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="excuse-reason" className="block text-xs font-semibold text-chalk-dim mb-1.5">
+              Sababta Cudurdaarka <span className="text-danger">*</span>
+            </label>
+            <textarea
+              id="excuse-reason"
+              required
+              rows={3}
+              value={excuseReason}
+              onChange={(e) => setExcuseReason(e.target.value)}
+              placeholder="Tusaale: Xanuun degdeg ah, howlo shaqo, ama cudurdaar qoys..."
+              className="w-full rounded-xl border border-club-border bg-surface p-3 text-xs text-chalk placeholder:text-chalk-dim/50 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-club-border">
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-xs"
+              onClick={() => setIsExcuseModalOpen(false)}
+            >
+              Ka Noqo
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              className="text-xs font-bold"
+              disabled={isSubmittingExcuse || !excuseReason.trim()}
+            >
+              {isSubmittingExcuse ? 'Waa la dirayaa...' : 'Gudbi Cudurdaarka'}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   )
 }

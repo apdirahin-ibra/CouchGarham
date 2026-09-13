@@ -106,8 +106,8 @@ export function PlayerFinanceTab() {
             className="text-xs font-bold py-1 px-3 self-start sm:self-auto"
           >
             {playerFee?.status === 'paid'
-              ? 'Wuu Dhiibay'
-              : `Waa Lagu Leeyahay: $${(playerFee?.debt ?? 10).toFixed(2)}`}
+              ? 'Wuu Dhiibay ✅'
+              : `Waa Lagu Leeyahay: $${(playerFee?.debt ?? 0.5).toFixed(2)} ❌`}
           </StatusBadge>
         </div>
 
@@ -117,7 +117,7 @@ export function PlayerFinanceTab() {
               Lagaa rabo
             </span>
             <strong className="font-display text-lg sm:text-xl font-bold text-chalk">
-              ${(playerFee?.expectedAmount ?? 10).toFixed(2)}
+              ${(playerFee?.expectedAmount ?? 0.5).toFixed(2)}
             </strong>
           </div>
 
@@ -136,10 +136,10 @@ export function PlayerFinanceTab() {
             </span>
             <strong
               className={`font-display text-lg sm:text-xl font-bold ${
-                (playerFee?.debt ?? 10) > 0 ? 'text-danger' : 'text-gold'
+                (playerFee?.debt ?? 0.5) > 0 ? 'text-danger' : 'text-gold'
               }`}
             >
-              ${(playerFee?.debt ?? 10).toFixed(2)}
+              ${(playerFee?.debt ?? 0.5).toFixed(2)}
             </strong>
           </div>
         </div>

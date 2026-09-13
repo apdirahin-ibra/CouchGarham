@@ -5,10 +5,12 @@ import {
   Check,
   CreditCard,
   DollarSign,
+  Edit2,
   Plus,
   RefreshCw,
   Trash2,
   Users,
+  X,
 } from 'lucide-react'
 
 import { useAuth } from '../../lib/auth-client'
@@ -22,7 +24,9 @@ import {
   deleteFinanceEntryFn,
   getAllPlayerFeesAdminFn,
   getFinanceLedgerFn,
+  quickTogglePlayerFeeAdminFn,
   recordPlayerFeePaymentAdminFn,
+  setMonthlyFeeConfigAdminFn,
 } from '../../server/api'
 import {
   Button,
@@ -173,6 +177,28 @@ export function AdminFinanceTab() {
     }
   }, [token, currentMonth])
 
+  const [isFeeConfigOpen, setIsFeeConfigOpen] = useState(false)
+  const [feeConfigInput, setFeeConfigInput] = useState('0.50')
+  const [isSavingFeeConfig, setIsSavingFeeConfig] = useState(false)
+  const [feeFilter, setFeeFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
+
+  const configuredFee = playerFees[0]?.expectedAmount ?? 0.5
+  const totalExpected = playerFees.reduce((acc, p) => acc + p.expectedAmount, 0)
+  const totalCollected = playerFees.reduce((acc, p) => acc + p.paidAmount, 0)
+  const totalDebt = playerFees.reduce((acc, p) => acc + p.debt, 0)
+  const paidCount = playerFees.filter((p) => p.status === 'paid').length
+  const unpaidCount = playerFees.filter((p) => p.status !== 'paid').length
+  const collectionPercentage =
+    totalExpected > 0
+      ? Math.min(100, Math.round((totalCollected / totalExpected) * 100))
+      : 0
+
+  const filteredPlayerFees = playerFees.filter((p) => {
+    if (feeFilter === 'paid') return p.status === 'paid'
+    if (feeFilter === 'unpaid') return p.status !== 'paid'
+    return true
+  })
+
   useEffect(() => {
     if (subTab === 'playerFees') {
       loadPlayerFees()
@@ -181,7 +207,11 @@ export function AdminFinanceTab() {
 
   const handleOpenPaymentModal = (player: PlayerFeeItem) => {
     setPayingPlayer(player)
-    setPaymentAmount(player.debt > 0 ? String(player.debt) : '10.00')
+    setPaymentAmount(
+      player.debt > 0
+        ? player.debt.toFixed(2)
+        : player.expectedAmount.toFixed(2),
+    )
     setPaymentNote(player.note || '')
     setPaymentDate(getTodayDateString())
   }
@@ -199,7 +229,7 @@ export function AdminFinanceTab() {
           sessionToken: token,
           playerId: payingPlayer.playerId,
           monthKey: currentMonth,
-          expectedAmount: payingPlayer.expectedAmount || 10,
+          expectedAmount: payingPlayer.expectedAmount || 0.5,
           paidAmount: num,
           note: paymentNote.trim() || null,
           paidAt: paymentDate,
@@ -221,27 +251,82 @@ export function AdminFinanceTab() {
     }
   }
 
-  const handleQuickMarkPaid = async (player: PlayerFeeItem) => {
+  const handleQuickToggle = async (
+    player: PlayerFeeItem,
+    action: 'paid' | 'unpaid',
+  ) => {
     if (!token) return
+
+    // Optimistic update
+    const nextStatus = action === 'paid' ? 'paid' : 'unpaid'
+    const nextPaid = action === 'paid' ? player.expectedAmount : 0
+    const nextDebt = action === 'paid' ? 0 : player.expectedAmount
+    const today = getTodayDateString()
+
+    setPlayerFees((prev) =>
+      prev.map((p) =>
+        p.playerId === player.playerId
+          ? {
+              ...p,
+              status: nextStatus,
+              paidAmount: nextPaid,
+              debt: nextDebt,
+              paidAt: action === 'paid' ? today : null,
+              statusLabel:
+                action === 'paid'
+                  ? 'Wuu Dhiibay'
+                  : `Waa Lagu Leeyahay: $${nextDebt.toFixed(2)}`,
+            }
+          : p,
+      ),
+    )
+
     try {
-      await recordPlayerFeePaymentAdminFn({
+      await quickTogglePlayerFeeAdminFn({
         data: {
           sessionToken: token,
           playerId: player.playerId,
           monthKey: currentMonth,
-          expectedAmount: player.expectedAmount || 10,
-          paidAmount: player.expectedAmount || 10,
-          note: 'Si toos ah ayaa loo xaqiijiyay',
-          paidAt: getTodayDateString(),
+          action,
         },
       })
-      await loadPlayerFees()
       notify(
-        `${player.name}: Khidmadda bishan waa la xaqiijiyay ($10.00)`,
-        'success',
+        action === 'paid'
+          ? `${player.name}: Wuu bixiyay $${player.expectedAmount.toFixed(2)} ✅`
+          : `${player.name}: Ma dhiibin (Waa lagu leeyahay $${player.expectedAmount.toFixed(2)}) ❌`,
+        action === 'paid' ? 'success' : 'neutral',
       )
     } catch (err: any) {
-      notify(err?.message || 'Qalad ayaa dhacay xaqiijinta lacagta', 'danger')
+      notify(err?.message || 'Qalad ayaa dhacay diiwaangelinta', 'danger')
+      loadPlayerFees()
+    }
+  }
+
+  const handleSaveFeeConfig = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!token) return
+    const num = parseFloat(feeConfigInput)
+    if (isNaN(num) || num < 0) {
+      notify('Fadlan geli lacag sax ah', 'danger')
+      return
+    }
+
+    setIsSavingFeeConfig(true)
+    try {
+      await setMonthlyFeeConfigAdminFn({
+        data: {
+          sessionToken: token,
+          monthKey: currentMonth,
+          expectedAmount: num,
+        },
+      })
+      notify(`Khidmadda bishan waxaa loo dejiyay $${num.toFixed(2)}`, 'success')
+      setIsFeeConfigOpen(false)
+      await loadPlayerFees()
+    } catch (err: any) {
+      notify(err?.message || 'Qalad ayaa dhacay beddelista khidmadda', 'danger')
+    } finally {
+      setIsSavingFeeConfig(false)
     }
   }
 
@@ -396,70 +481,153 @@ export function AdminFinanceTab() {
       ) : (
         /* Player Fees SubTab */
         <div className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-center">
-            <div className="rounded-xl border border-club-border bg-surface-raised p-3">
-              <span className="block text-[0.6875rem] font-bold uppercase text-chalk-dim">
-                Wadarta Roster-ka
-              </span>
-              <strong className="font-display text-2xl font-bold text-chalk">
-                {playerFees.length}
-              </strong>
-            </div>
-
-            <div className="rounded-xl border border-success/30 bg-surface-raised p-3">
-              <span className="block text-[0.6875rem] font-bold uppercase text-success">
-                Wuu Dhiibay
-              </span>
-              <strong className="font-display text-2xl font-bold text-success">
-                {playerFees.filter((p) => p.status === 'paid').length}
-              </strong>
-            </div>
-
-            <div className="rounded-xl border border-danger/30 bg-surface-raised p-3">
-              <span className="block text-[0.6875rem] font-bold uppercase text-danger">
-                Waa Lagu Leeyahay
-              </span>
-              <strong className="font-display text-2xl font-bold text-danger">
-                {playerFees.filter((p) => p.status !== 'paid').length}
-              </strong>
-            </div>
-
-            <div className="rounded-xl border border-gold/30 bg-surface-raised p-3">
-              <span className="block text-[0.6875rem] font-bold uppercase text-gold">
-                La Ururiyay
-              </span>
-              <strong className="font-display text-2xl font-bold text-gold">
-                $
-                {playerFees
-                  .reduce((acc, p) => acc + p.paidAmount, 0)
-                  .toFixed(2)}
-              </strong>
-            </div>
-          </div>
-
-          <TicketCard className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <SectionTitle eyebrow="KHIDMADDA BISHAN" as="h3">
-                  Xaaladda Khidmadda Ciyaartooyda ({currentMonth})
-                </SectionTitle>
-                <p className="text-xs text-chalk-dim m-0">
-                  Ciyaartoy kasta waxaa laga rabaa $10.00 bishii. Halkan kaga
-                  xaqiiji lacagta.
-                </p>
+          {/* Deji Khidmadda Bishan Banner */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-gold/40 bg-surface-raised p-3.5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold border border-gold/30">
+                <DollarSign className="h-5 w-5" />
               </div>
+              <div>
+                <span className="block text-[0.6875rem] font-bold uppercase tracking-wider text-gold">
+                  Khidmadda La Rabo Bishan ({currentMonth})
+                </span>
+                <strong className="font-display text-xl sm:text-2xl font-bold text-chalk">
+                  ${configuredFee.toFixed(2)}{' '}
+                  <span className="text-xs font-normal text-chalk-dim">
+                    / Ciyaartoygiiba
+                  </span>
+                </strong>
+              </div>
+            </div>
 
+            <div className="flex items-center gap-2">
               <Button
                 variant="secondary"
-                className="text-xs py-1 px-2.5 h-8 gap-1.5"
+                className="text-xs py-1.5 px-3 gap-1.5 border-gold/40 text-gold hover:bg-gold/20"
+                onClick={() => {
+                  setFeeConfigInput(configuredFee.toFixed(2))
+                  setIsFeeConfigOpen(true)
+                }}
+              >
+                <Edit2 className="h-3.5 w-3.5" />
+                <span>Beddel Khidmadda ($)</span>
+              </Button>
+              <Button
+                variant="secondary"
+                className="text-xs py-1.5 px-2.5 h-8 gap-1"
                 onClick={loadPlayerFees}
                 disabled={isLoadingFees}
+                title="Cusbooneysii"
               >
                 <RefreshCw
                   className={`h-3.5 w-3.5 ${isLoadingFees ? 'animate-spin' : ''}`}
                 />
-                <span>Cusbooneysii</span>
               </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-center">
+            <div className="rounded-xl border border-club-border bg-surface-raised p-3">
+              <span className="block text-[0.6875rem] font-bold uppercase text-chalk-dim">
+                Wadarta La Rabo
+              </span>
+              <strong className="font-display text-2xl font-bold text-chalk">
+                ${totalExpected.toFixed(2)}
+              </strong>
+              <span className="block text-[0.625rem] text-chalk-dim mt-0.5">
+                {playerFees.length} ciyaartoy
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-success/30 bg-surface-raised p-3">
+              <span className="block text-[0.6875rem] font-bold uppercase text-success">
+                La Bixiyay (Dhiibay)
+              </span>
+              <strong className="font-display text-2xl font-bold text-success">
+                ${totalCollected.toFixed(2)}
+              </strong>
+              <span className="block text-[0.625rem] text-success font-semibold mt-0.5">
+                {paidCount} dhiibay ✅
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-danger/30 bg-surface-raised p-3">
+              <span className="block text-[0.6875rem] font-bold uppercase text-danger">
+                Lagu Leeyahay (Dhiman)
+              </span>
+              <strong className="font-display text-2xl font-bold text-danger">
+                ${totalDebt.toFixed(2)}
+              </strong>
+              <span className="block text-[0.625rem] text-danger font-semibold mt-0.5">
+                {unpaidCount} ma dhiibin ❌
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-gold/30 bg-surface-raised p-3 flex flex-col justify-between">
+              <div>
+                <span className="block text-[0.6875rem] font-bold uppercase text-gold">
+                  Heerka Ururinta
+                </span>
+                <strong className="font-display text-2xl font-bold text-gold">
+                  {collectionPercentage}%
+                </strong>
+              </div>
+              <div className="w-full bg-pitch-deep rounded-full h-1.5 mt-2 overflow-hidden border border-club-border">
+                <div
+                  className="bg-gold h-1.5 rounded-full transition-all duration-500"
+                  style={{ width: `${collectionPercentage}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <TicketCard className="p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pb-2 border-b border-club-border">
+              <div>
+                <SectionTitle eyebrow="LIISKA CIYAARTOOYDA" as="h3">
+                  Xaaladda Lacagta ee Ciyaartoy Kasta
+                </SectionTitle>
+                <p className="text-xs text-chalk-dim m-0">
+                  U isticmaal badhamada degdegga ah ee Sax (✅ Dhiibay) iyo Khalad (❌ Ma Dhiibin) si xisaabtu si toos ah isugu darto.
+                </p>
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex items-center rounded-lg border border-club-border bg-pitch-deep p-1 self-start sm:self-auto text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setFeeFilter('all')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                    feeFilter === 'all'
+                      ? 'bg-gold text-pitch font-bold shadow'
+                      : 'text-chalk-dim hover:text-chalk'
+                  }`}
+                >
+                  Dhammaan ({playerFees.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFeeFilter('paid')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                    feeFilter === 'paid'
+                      ? 'bg-success text-pitch font-bold shadow'
+                      : 'text-chalk-dim hover:text-success'
+                  }`}
+                >
+                  Dhiibay ({paidCount} ✅)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFeeFilter('unpaid')}
+                  className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                    feeFilter === 'unpaid'
+                      ? 'bg-danger text-pitch font-bold shadow'
+                      : 'text-chalk-dim hover:text-danger'
+                  }`}
+                >
+                  Ma Dhiibin ({unpaidCount} ❌)
+                </button>
+              </div>
             </div>
 
             {isLoadingFees ? (
@@ -467,68 +635,93 @@ export function AdminFinanceTab() {
                 <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                 <span>Soo dejinaya xogta khidmadda ciyaartooyda...</span>
               </div>
-            ) : playerFees.length === 0 ? (
+            ) : filteredPlayerFees.length === 0 ? (
               <p className="text-xs text-chalk-dim text-center py-6">
-                Weli ma jiraan ciyaartooy firfircoon oo liiska ku jira.
+                Ma jiraan ciyaartooy ku jira shaandhayntan.
               </p>
             ) : (
               <div className="divide-y divide-club-border">
-                {playerFees.map((player) => (
+                {filteredPlayerFees.map((player) => (
                   <div
                     key={player.playerId}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3.5 gap-3"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-3"
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold border border-gold/30 font-display text-sm font-bold">
                         #{player.jerseyNumber ?? '-'}
                       </div>
                       <div>
-                        <strong className="block text-sm font-bold text-chalk">
-                          {player.name}
-                        </strong>
+                        <div className="flex items-center gap-2">
+                          <strong className="block text-sm font-bold text-chalk">
+                            {player.name}
+                          </strong>
+                          {player.position ? (
+                            <span className="text-[0.6875rem] text-chalk-dim">
+                              ({player.position})
+                            </span>
+                          ) : null}
+                        </div>
                         <span className="text-xs text-chalk-dim">
-                          {player.position ?? 'Ciyaartoy'} • Laga rabo: $
-                          {player.expectedAmount.toFixed(2)} • Dhiibay: $
-                          {player.paidAmount.toFixed(2)}
+                          Laga rabo: <strong className="text-chalk font-semibold">${player.expectedAmount.toFixed(2)}</strong> • Dhiibay: <strong className={player.paidAmount > 0 ? 'text-success font-semibold' : 'text-chalk font-semibold'}>${player.paidAmount.toFixed(2)}</strong>
                         </span>
-                        {player.paidAt ? (
+                        {player.paidAt && player.status === 'paid' ? (
                           <span className="block text-[0.6875rem] text-success italic mt-0.5">
-                            La dhiibay: {formatSomaliDate(player.paidAt)}
+                            La bixiyay: {formatSomaliDate(player.paidAt)}
                             {player.note ? ` (${player.note})` : ''}
                           </span>
                         ) : null}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
                       <StatusBadge
                         tone={player.status === 'paid' ? 'success' : 'danger'}
                         className="text-xs font-bold"
                       >
                         {player.status === 'paid'
-                          ? 'Wuu Dhiibay'
-                          : `Lagu leeyahay: $${player.debt.toFixed(2)}`}
+                          ? 'Wuu Dhiibay ✅'
+                          : `Lagu leeyahay: $${player.debt.toFixed(2)} ❌`}
                       </StatusBadge>
 
-                      {player.status !== 'paid' ? (
-                        <Button
-                          variant="primary"
-                          className="text-xs py-1 px-2.5 h-8 gap-1 bg-success hover:bg-success-light text-pitch font-bold"
-                          onClick={() => handleQuickMarkPaid(player)}
-                          title="Si degdeg ah u xaqiiji inuu dhiibay $10"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                          <span>Dhiibay ($10)</span>
-                        </Button>
-                      ) : null}
+                      {/* Button 1: Sax (Dhiibay) */}
+                      <Button
+                        variant="primary"
+                        className={`text-xs py-1 px-2.5 h-8 gap-1 font-bold ${
+                          player.status === 'paid'
+                            ? 'bg-success/20 text-success border border-success/40 hover:bg-success/30'
+                            : 'bg-success hover:bg-success-light text-pitch shadow-sm'
+                        }`}
+                        onClick={() => handleQuickToggle(player, 'paid')}
+                        title={`Xaqiiji inuu dhiibay $${player.expectedAmount.toFixed(2)}`}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        <span>Dhiibay (${player.expectedAmount.toFixed(2)})</span>
+                      </Button>
 
+                      {/* Button 2: Khalad (Ma Dhiibin) */}
+                      <Button
+                        variant="secondary"
+                        className={`text-xs py-1 px-2.5 h-8 gap-1 ${
+                          player.status !== 'paid'
+                            ? 'bg-danger/20 text-danger border border-danger/40'
+                            : 'border-club-border text-chalk-dim hover:border-danger/50 hover:text-danger'
+                        }`}
+                        onClick={() => handleQuickToggle(player, 'unpaid')}
+                        title="U calaamadee inaan la bixin"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        <span>Ma Dhiibin</span>
+                      </Button>
+
+                      {/* Button 3: Qor Lacag */}
                       <Button
                         variant="secondary"
                         className="text-xs py-1 px-2.5 h-8 gap-1"
                         onClick={() => handleOpenPaymentModal(player)}
+                        title="Qor qaddar kale ama xusuusin"
                       >
                         <DollarSign className="h-3.5 w-3.5" />
-                        <span>Qor Lacag</span>
+                        <span>Qor</span>
                       </Button>
                     </div>
                   </div>
@@ -674,6 +867,47 @@ export function AdminFinanceTab() {
             </Button>
             <Button variant="primary" type="submit" busy={isSavingPayment}>
               Keydi Lacag-bixinta
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Modal: Beddel Khidmadda Bishan */}
+      <Dialog
+        open={isFeeConfigOpen}
+        onClose={() => setIsFeeConfigOpen(false)}
+        title="Deji Khidmadda Bishan ee Ciyaartooyda"
+      >
+        <form onSubmit={handleSaveFeeConfig} className="space-y-3.5">
+          <div>
+            <label className="mb-1 block text-xs font-bold text-chalk">
+              Khidmadda Laga Rabo Ciyaartoy Kasta Bishan ($) *
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={feeConfigInput}
+              onChange={(e) => setFeeConfigInput(e.target.value)}
+              placeholder="Tusaale: 0.50 ama 1.00 ama 10.00"
+              className="ui-input text-base font-bold text-chalk"
+              required
+            />
+            <p className="mt-1.5 text-[0.6875rem] text-chalk-dim leading-relaxed">
+              Tusaale: Haddii aad qorto <strong>0.50</strong>, Ali iyo ciyaartoy kasta waxaa bishan laga rabi doonaa <strong>$0.50</strong>. Xisaabiyaashuna si toos ah ayay isu cusbooneysiin doonaan.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => setIsFeeConfigOpen(false)}
+            >
+              Ka Noqo
+            </Button>
+            <Button variant="primary" type="submit" busy={isSavingFeeConfig}>
+              Keydi Khidmadda
             </Button>
           </div>
         </form>

@@ -95,13 +95,47 @@ export const playerFeePaymentSchema = z.object({
   monthKey: z
     .string()
     .regex(/^\d{4}-\d{2}$/, 'Qaabka bisha waa inuu noqdaa YYYY-MM'),
-  expectedAmount: z.number().min(0).default(10),
+  expectedAmount: z.number().min(0).default(0.5),
   paidAmount: z.number().min(0),
   note: z.string().optional().nullable(),
   paidAt: z.string().optional().nullable(),
 })
 
 export type PlayerFeePaymentInput = z.infer<typeof playerFeePaymentSchema>
+
+export const monthlyFeeConfigSchema = z.object({
+  monthKey: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/, 'Qaabka bisha waa inuu noqdaa YYYY-MM')
+    .optional(),
+  expectedAmount: z.number().min(0, 'Khidmaddu kama yaraan karto 0'),
+})
+
+export type MonthlyFeeConfigInput = z.infer<typeof monthlyFeeConfigSchema>
+
+export const quickToggleFeeSchema = z.object({
+  playerId: z.string().uuid('Player ID khaldan'),
+  monthKey: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/, 'Qaabka bisha waa inuu noqdaa YYYY-MM')
+    .optional(),
+  action: z.enum(['paid', 'unpaid']),
+})
+
+export type QuickToggleFeeInput = z.infer<typeof quickToggleFeeSchema>
+
+/**
+ * Returns the default or configured fee for a given month. Defaults to $0.50 if not specified.
+ */
+async function getMonthExpectedFee(db: any, targetMonth: string): Promise<number> {
+  const [firstRecord] = await db
+    .select({ expectedAmount: playerFeeRecords.expectedAmount })
+    .from(playerFeeRecords)
+    .where(eq(playerFeeRecords.monthKey, targetMonth))
+    .limit(1)
+
+  return firstRecord ? parseFloat(firstRecord.expectedAmount) : 0.5
+}
 
 /**
  * Player: Returns fee status for authenticated player for a given month.
@@ -122,7 +156,8 @@ export async function getPlayerFeeStatus(playerId: string, monthKey?: string) {
     )
     .limit(1)
 
-  const expectedAmount = record ? parseFloat(record.expectedAmount) : 10.0
+  const defaultFee = await getMonthExpectedFee(db, targetMonth)
+  const expectedAmount = record ? parseFloat(record.expectedAmount) : defaultFee
   const paidAmount = record ? parseFloat(record.paidAmount) : 0.0
   const debt = Math.max(0, expectedAmount - paidAmount)
   const isPaid = (debt === 0 && paidAmount > 0) || record?.status === 'paid'
@@ -161,11 +196,15 @@ export async function getAllPlayerFeesAdmin(monthKey?: string) {
       .where(eq(playerFeeRecords.monthKey, targetMonth)),
   ])
 
+  const defaultMonthFee =
+    feeRecords.length > 0 ? parseFloat(feeRecords[0].expectedAmount) : 0.5
   const feeMap = new Map(feeRecords.map((r) => [r.playerId, r]))
 
   return activePlayers.map((player) => {
     const record = feeMap.get(player.id)
-    const expectedAmount = record ? parseFloat(record.expectedAmount) : 10.0
+    const expectedAmount = record
+      ? parseFloat(record.expectedAmount)
+      : defaultMonthFee
     const paidAmount = record ? parseFloat(record.paidAmount) : 0.0
     const debt = Math.max(0, expectedAmount - paidAmount)
     const isPaid = (debt === 0 && paidAmount > 0) || record?.status === 'paid'
@@ -236,4 +275,134 @@ export async function recordPlayerFeePaymentAdmin(
     .returning()
 
   return record
+}
+
+/**
+ * Admin: Updates the required monthly fee for all active players in a given month.
+ */
+export async function setMonthlyFeeConfigAdmin(input: MonthlyFeeConfigInput) {
+  const db = getDatabase()
+  const validated = monthlyFeeConfigSchema.parse(input)
+  const targetMonth = validated.monthKey || getCurrentMonthKey()
+  const amountStr = validated.expectedAmount.toFixed(2)
+  const activePlayers = await getActiveRoster()
+
+  for (const player of activePlayers) {
+    const [existing] = await db
+      .select()
+      .from(playerFeeRecords)
+      .where(
+        and(
+          eq(playerFeeRecords.playerId, player.id),
+          eq(playerFeeRecords.monthKey, targetMonth),
+        ),
+      )
+      .limit(1)
+
+    if (existing) {
+      const paid = parseFloat(existing.paidAmount) || 0
+      const exp = validated.expectedAmount
+      const newStatus =
+        paid >= exp && exp > 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid'
+      await db
+        .update(playerFeeRecords)
+        .set({
+          expectedAmount: amountStr,
+          status: newStatus,
+          updatedAt: new Date(),
+        })
+        .where(eq(playerFeeRecords.id, existing.id))
+    } else {
+      await db.insert(playerFeeRecords).values({
+        playerId: player.id,
+        monthKey: targetMonth,
+        expectedAmount: amountStr,
+        paidAmount: '0.00',
+        status: 'unpaid',
+      })
+    }
+  }
+
+  return {
+    success: true,
+    monthKey: targetMonth,
+    expectedAmount: validated.expectedAmount,
+  }
+}
+
+/**
+ * Admin: Fast one-click toggle for marking player as paid (✅ Sax) or unpaid (❌ Khalad).
+ */
+export async function quickTogglePlayerFeeAdmin(input: QuickToggleFeeInput) {
+  const db = getDatabase()
+  const validated = quickToggleFeeSchema.parse(input)
+  const targetMonth = validated.monthKey || getCurrentMonthKey()
+  const today = getTodayDateString()
+
+  const [existing] = await db
+    .select()
+    .from(playerFeeRecords)
+    .where(
+      and(
+        eq(playerFeeRecords.playerId, validated.playerId),
+        eq(playerFeeRecords.monthKey, targetMonth),
+      ),
+    )
+    .limit(1)
+
+  const expectedAmount = existing
+    ? parseFloat(existing.expectedAmount)
+    : await getMonthExpectedFee(db, targetMonth)
+
+  if (validated.action === 'paid') {
+    const [record] = await db
+      .insert(playerFeeRecords)
+      .values({
+        playerId: validated.playerId,
+        monthKey: targetMonth,
+        expectedAmount: expectedAmount.toFixed(2),
+        paidAmount: expectedAmount.toFixed(2),
+        status: 'paid',
+        paidAt: today,
+        note: 'La bixiyay (Buuxda)',
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [playerFeeRecords.playerId, playerFeeRecords.monthKey],
+        set: {
+          paidAmount: expectedAmount.toFixed(2),
+          status: 'paid',
+          paidAt: today,
+          note: 'La bixiyay (Buuxda)',
+          updatedAt: new Date(),
+        },
+      })
+      .returning()
+    return record
+  } else {
+    const [record] = await db
+      .insert(playerFeeRecords)
+      .values({
+        playerId: validated.playerId,
+        monthKey: targetMonth,
+        expectedAmount: expectedAmount.toFixed(2),
+        paidAmount: '0.00',
+        status: 'unpaid',
+        paidAt: null,
+        note: null,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [playerFeeRecords.playerId, playerFeeRecords.monthKey],
+        set: {
+          paidAmount: '0.00',
+          status: 'unpaid',
+          paidAt: null,
+          note: null,
+          updatedAt: new Date(),
+        },
+      })
+      .returning()
+    return record
+  }
 }
