@@ -69,16 +69,38 @@ export function MatchAlarmBanner({
 }: MatchAlarmBannerProps) {
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [isAudioActive, setIsAudioActive] = useState(false)
+  const [simulatedState, setSimulatedState] = useState<
+    'match_day' | 'urgent_12h' | 'warning_24h' | null
+  >(null)
   const intervalRef = useRef<any>(null)
 
   if (!alert || !alert.hasUpcomingMatch) {
     return null
   }
 
+  const isMatchDay =
+    simulatedState === 'match_day' ||
+    (!simulatedState && Boolean(alert.isMatchDay))
+  const isWithin12Hours =
+    simulatedState === 'urgent_12h' ||
+    simulatedState === 'match_day' ||
+    (!simulatedState && Boolean(alert.isWithin12Hours))
+  const isWithin24Hours =
+    simulatedState === 'warning_24h' ||
+    simulatedState === 'urgent_12h' ||
+    simulatedState === 'match_day' ||
+    (!simulatedState && Boolean(alert.isWithin24Hours))
+
+  const hoursRemainingText =
+    simulatedState === 'match_day'
+      ? 'Maanta waa Maalintii Ciyaarta! ⚽'
+      : simulatedState === 'urgent_12h'
+        ? 'Waxaa ka dhiman wax ka yar 12 saac (6h)!'
+        : simulatedState === 'warning_24h'
+          ? 'Waxaa ka dhiman wax ka yar 24 saac (18h)!'
+          : alert.hoursRemainingText
+
   const {
-    isMatchDay,
-    isWithin12Hours,
-    hoursRemainingText,
     matchTitle,
     opponent,
     timeText,
@@ -117,7 +139,9 @@ export function MatchAlarmBanner({
         className={`relative overflow-hidden rounded-2xl border-2 transition-all shadow-xl ${
           isEmergency
             ? 'border-danger bg-gradient-to-r from-danger/25 via-pitch-deep to-danger/30 text-chalk'
-            : 'border-gold/80 bg-gradient-to-r from-gold/20 via-pitch-deep to-gold/25 text-chalk'
+            : isWithin24Hours
+              ? 'border-amber-500/80 bg-gradient-to-r from-amber-500/20 via-pitch-deep to-amber-500/25 text-chalk'
+              : 'border-gold/80 bg-gradient-to-r from-gold/20 via-pitch-deep to-gold/25 text-chalk'
         }`}
       >
         {/* Pulsing glow background effect */}
@@ -134,7 +158,9 @@ export function MatchAlarmBanner({
               className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border shadow-md ${
                 isEmergency
                   ? 'bg-danger/25 border-danger/60 text-danger animate-pulse'
-                  : 'bg-gold/20 border-gold/50 text-gold'
+                  : isWithin24Hours
+                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                    : 'bg-gold/20 border-gold/50 text-gold'
               }`}
             >
               {isEmergency ? (
@@ -150,16 +176,20 @@ export function MatchAlarmBanner({
                   className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[0.6875rem] font-black uppercase tracking-wider ${
                     isEmergency
                       ? 'bg-danger text-white animate-pulse'
-                      : 'bg-gold text-pitch-black font-extrabold'
+                      : isWithin24Hours
+                        ? 'bg-amber-500 text-pitch-black font-extrabold'
+                        : 'bg-gold text-pitch-black font-extrabold'
                   }`}
                 >
                   <Bell className="h-3 w-3 inline" />
                   <span>
                     {isMatchDay
-                      ? 'DIGNIIN: CIYAARTA MAANTA'
+                      ? 'DIGNIIN: CIYAARTA MAANTA (0 SAAC)'
                       : isWithin12Hours
-                        ? 'DIGNIIN DEGDEG AH (12 SAAC)'
-                        : 'DIGNIIN CIYAAR (24 SAAC)'}
+                        ? 'DIGNIIN DEGDEG AH: 12 SAAC KA DHIMAN'
+                        : isWithin24Hours
+                          ? 'DIGNIIN CIYAAR: 24 SAAC KA DHIMAN'
+                          : 'DIGNIIN: JADWALKA CIYAARTA SOO SOCOTA'}
                   </span>
                 </span>
 
@@ -304,6 +334,57 @@ export function MatchAlarmBanner({
               <li>Wadashada qalabka buuxa (garoorka, kabaha, iyo shin pads).</li>
               <li>Anshaxa ciyaarta iyo adeecidda talooyinka macallinka.</li>
             </ul>
+          </div>
+
+          {/* Interactive Warning Level Test Selector */}
+          <div className="rounded-xl border border-club-border bg-pitch-deep p-3 space-y-2 text-xs">
+            <span className="font-bold text-gold uppercase tracking-wider block text-[0.6875rem]">
+              🎮 Tijaabi Heerarka Digniinta (Test Warning Modes):
+            </span>
+            <div className="grid grid-cols-3 gap-1.5 text-center">
+              <button
+                type="button"
+                onClick={() => setSimulatedState('match_day')}
+                className={`py-1.5 px-2 rounded-lg text-[0.6875rem] font-bold border transition-all cursor-pointer ${
+                  isMatchDay && (!simulatedState || simulatedState === 'match_day')
+                    ? 'bg-danger text-white border-danger shadow-md'
+                    : 'bg-surface text-danger border-danger/40 hover:bg-danger/10'
+                }`}
+              >
+                ⚽ Maanta (0h)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSimulatedState('urgent_12h')}
+                className={`py-1.5 px-2 rounded-lg text-[0.6875rem] font-bold border transition-all cursor-pointer ${
+                  simulatedState === 'urgent_12h' || (!simulatedState && alert.isWithin12Hours && !alert.isMatchDay)
+                    ? 'bg-danger text-white border-danger shadow-md'
+                    : 'bg-surface text-danger border-danger/40 hover:bg-danger/10'
+                }`}
+              >
+                🔥 12 Saac Ka Dhiman
+              </button>
+              <button
+                type="button"
+                onClick={() => setSimulatedState('warning_24h')}
+                className={`py-1.5 px-2 rounded-lg text-[0.6875rem] font-bold border transition-all cursor-pointer ${
+                  simulatedState === 'warning_24h' || (!simulatedState && alert.isWithin24Hours && !alert.isWithin12Hours)
+                    ? 'bg-amber-500 text-pitch-black border-amber-500 shadow-md font-extrabold'
+                    : 'bg-surface text-amber-400 border-amber-400/40 hover:bg-amber-400/10'
+                }`}
+              >
+                ⚠️ 24 Saac Ka Dhiman
+              </button>
+            </div>
+            {simulatedState && (
+              <button
+                type="button"
+                onClick={() => setSimulatedState(null)}
+                className="w-full text-center text-[0.625rem] text-gold underline hover:text-gold-hover pt-1 cursor-pointer"
+              >
+                Dib ugu noqo xisaabinta tooska ah (Live Mode)
+              </button>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2 border-t border-club-border">
