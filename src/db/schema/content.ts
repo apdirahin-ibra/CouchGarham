@@ -67,6 +67,9 @@ export const scheduleEntries = pgTable('schedule_entries', {
   dayName: varchar('day_name', { length: 50 }).notNull(),
   timeText: varchar('time_text', { length: 100 }).notNull(),
   place: varchar('place', { length: 255 }).notNull(),
+  eventType: varchar('event_type', { length: 50 }).default('tababar').notNull(),
+  opponent: varchar('opponent', { length: 255 }),
+  matchDate: varchar('match_date', { length: 10 }),
   ...auditColumns(),
 })
 

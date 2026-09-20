@@ -28,6 +28,10 @@ type PlayerStat = {
   goals: number
   assists: number
   errors: number
+  trainingScore?: number
+  errorsMajor?: number
+  errorsMedium?: number
+  errorsSevere?: number
   xadirCount: number
   maqanCount: number
   daahayCount: number
@@ -60,6 +64,10 @@ export function AdminStatsTab() {
   const [editGoals, setEditGoals] = useState('')
   const [editAssists, setEditAssists] = useState('')
   const [editErrors, setEditErrors] = useState('')
+  const [editTrainingScore, setEditTrainingScore] = useState<number>(100)
+  const [editErrorsMajor, setEditErrorsMajor] = useState('0')
+  const [editErrorsMedium, setEditErrorsMedium] = useState('0')
+  const [editErrorsSevere, setEditErrorsSevere] = useState('0')
   const [isSaving, setIsSaving] = useState(false)
 
   // Ratings leaderboard state
@@ -116,6 +124,10 @@ export function AdminStatsTab() {
     setEditGoals(String(player.goals))
     setEditAssists(String(player.assists))
     setEditErrors(String(player.errors))
+    setEditTrainingScore(player.trainingScore ?? 100)
+    setEditErrorsMajor(String(player.errorsMajor ?? 0))
+    setEditErrorsMedium(String(player.errorsMedium ?? 0))
+    setEditErrorsSevere(String(player.errorsSevere ?? 0))
   }
 
   const handleSaveStat = async (e: React.FormEvent) => {
@@ -125,7 +137,10 @@ export function AdminStatsTab() {
 
     const g = parseInt(editGoals, 10) || 0
     const a = parseInt(editAssists, 10) || 0
-    const err = parseInt(editErrors, 10) || 0
+    const eMajor = parseInt(editErrorsMajor, 10) || 0
+    const eMedium = parseInt(editErrorsMedium, 10) || 0
+    const eSevere = parseInt(editErrorsSevere, 10) || 0
+    const computedErrors = eMajor + eMedium + eSevere || parseInt(editErrors, 10) || 0
 
     try {
       await updatePlayerMonthlyStatsFn({
@@ -135,7 +150,11 @@ export function AdminStatsTab() {
           monthKey: currentMonth,
           goals: Math.max(0, g),
           assists: Math.max(0, a),
-          errors: Math.max(0, err),
+          errors: Math.max(0, computedErrors),
+          trainingScore: editTrainingScore,
+          errorsMajor: Math.max(0, eMajor),
+          errorsMedium: Math.max(0, eMedium),
+          errorsSevere: Math.max(0, eSevere),
         },
       })
 
@@ -146,7 +165,11 @@ export function AdminStatsTab() {
                 ...p,
                 goals: Math.max(0, g),
                 assists: Math.max(0, a),
-                errors: Math.max(0, err),
+                errors: Math.max(0, computedErrors),
+                trainingScore: editTrainingScore,
+                errorsMajor: Math.max(0, eMajor),
+                errorsMedium: Math.max(0, eMedium),
+                errorsSevere: Math.max(0, eSevere),
               }
             : p,
         ),
@@ -164,6 +187,10 @@ export function AdminStatsTab() {
     goals: stats.reduce((acc, s) => acc + s.goals, 0),
     assists: stats.reduce((acc, s) => acc + s.assists, 0),
     errors: stats.reduce((acc, s) => acc + s.errors, 0),
+    errorsMajor: stats.reduce((acc, s) => acc + (s.errorsMajor ?? 0), 0),
+    errorsMedium: stats.reduce((acc, s) => acc + (s.errorsMedium ?? 0), 0),
+    errorsSevere: stats.reduce((acc, s) => acc + (s.errorsSevere ?? 0), 0),
+    dangerCount: stats.filter((s) => (s.trainingScore ?? 100) <= 30).length,
   }
 
   // Sorted Ratings Leaderboard
@@ -230,7 +257,7 @@ export function AdminStatsTab() {
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
             <div className="rounded-xl border border-gold/30 bg-surface-raised p-3 text-center">
               <span className="block text-xs font-bold uppercase text-gold">
                 Goolasha Kooxda
@@ -249,11 +276,57 @@ export function AdminStatsTab() {
             </div>
             <div className="rounded-xl border border-danger/30 bg-surface-raised p-3 text-center">
               <span className="block text-xs font-bold uppercase text-danger">
-                Qaladaadka (Errors)
+                Qaladaadka (Total)
               </span>
               <strong className="font-display text-2xl font-bold text-chalk">
                 {teamTotals.errors}
               </strong>
+              <div className="mt-1 flex items-center justify-center gap-1 text-[0.625rem] text-chalk-dim">
+                <span title="Qalad Weyn (90%)" className="text-danger font-semibold">
+                  W:{teamTotals.errorsMajor}
+                </span>{' '}
+                •
+                <span
+                  title="Qalad Dhexdhexaad (60%)"
+                  className="text-warning font-semibold"
+                >
+                  Dh:{teamTotals.errorsMedium}
+                </span>{' '}
+                •
+                <span
+                  title="Qalad Aad u Xun (30%)"
+                  className="text-danger font-bold"
+                >
+                  X:{teamTotals.errorsSevere}
+                </span>
+              </div>
+            </div>
+            <div
+              className={`rounded-xl border p-3 text-center ${
+                teamTotals.dangerCount > 0
+                  ? 'border-danger/60 bg-danger/10 animate-pulse'
+                  : 'border-club-border bg-surface-raised'
+              }`}
+            >
+              <span
+                className={`block text-xs font-bold uppercase ${
+                  teamTotals.dangerCount > 0 ? 'text-danger' : 'text-gold'
+                }`}
+              >
+                Halis Tababar (30%)
+              </span>
+              <strong
+                className={`font-display text-2xl font-bold ${
+                  teamTotals.dangerCount > 0 ? 'text-danger' : 'text-chalk'
+                }`}
+              >
+                {teamTotals.dangerCount}
+              </strong>
+              <span className="block text-[0.625rem] text-chalk-dim mt-0.5">
+                {teamTotals.dangerCount > 0
+                  ? '⚠️ Ciyaartooy halis ku jira'
+                  : 'Dhammaan waa nabad'}
+              </span>
             </div>
           </div>
 
@@ -356,6 +429,52 @@ export function AdminStatsTab() {
                       <strong className="text-sm text-chalk">
                         {player.daahayCount}
                       </strong>
+                    </div>
+                  </div>
+
+                  {/* Training Level Badge & Error Breakdown */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-club-border/60 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[0.6875rem] text-chalk-dim font-medium">
+                        Tababarka:
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[0.6875rem] font-bold uppercase ${
+                          (player.trainingScore ?? 100) <= 30
+                            ? 'bg-danger/25 text-danger border border-danger/60 animate-pulse'
+                            : (player.trainingScore ?? 100) <= 60
+                              ? 'bg-warning/20 text-warning border border-warning/40'
+                              : 'bg-success/20 text-success border border-success/40'
+                        }`}
+                      >
+                        {(player.trainingScore ?? 100) <= 30
+                          ? '🔴 30% Hooseeye (Halis)'
+                          : (player.trainingScore ?? 100) <= 60
+                            ? '🟡 60% Dhexdhexaad'
+                            : '🟢 100% Aad u Fiican'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[0.6875rem]">
+                      <span className="text-chalk-dim font-medium">Qaladaadka:</span>
+                      <span
+                        className="text-danger font-semibold"
+                        title="Qalad Weyn (90%)"
+                      >
+                        Weyn(90%): <strong>{player.errorsMajor ?? 0}</strong>
+                      </span>
+                      <span
+                        className="text-warning font-semibold"
+                        title="Qalad Dhexdhexaad (60%)"
+                      >
+                        Dhex(60%): <strong>{player.errorsMedium ?? 0}</strong>
+                      </span>
+                      <span
+                        className="text-danger font-bold"
+                        title="Qalad Aad u Xun (30%)"
+                      >
+                        Xun(30%): <strong>{player.errorsSevere ?? 0}</strong>
+                      </span>
                     </div>
                   </div>
                 </TicketCard>
@@ -559,30 +678,143 @@ export function AdminStatsTab() {
         title={editingStat ? `Beddel Natiijada: ${editingStat.name}` : ''}
       >
         <form onSubmit={handleSaveStat} className="space-y-4">
-          <TextField
-            label="Goolasha (Goals)"
-            type="number"
-            value={editGoals}
-            onChange={(e) => setEditGoals(e.target.value)}
-            min={0}
-            required
-          />
-          <TextField
-            label="Caawinta (Assists)"
-            type="number"
-            value={editAssists}
-            onChange={(e) => setEditAssists(e.target.value)}
-            min={0}
-            required
-          />
-          <TextField
-            label="Qaladaadka (Errors)"
-            type="number"
-            value={editErrors}
-            onChange={(e) => setEditErrors(e.target.value)}
-            min={0}
-            required
-          />
+          {/* Heerka Tababarka (Training Performance 100%, 60%, 30%) */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-gold uppercase tracking-wider">
+              Heerka Tababarka (100%, 60%, 30% Halis)
+            </label>
+            <p className="text-[0.6875rem] text-chalk-dim m-0">
+              Dooro heerka tababarka ee uu ciyaartoygu joogo bishan:
+            </p>
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setEditTrainingScore(100)}
+                className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer text-xs font-bold ${
+                  editTrainingScore === 100
+                    ? 'bg-success/25 border-success text-success ring-2 ring-success shadow-md shadow-success/20'
+                    : 'bg-surface-raised border-club-border text-chalk-dim hover:text-chalk hover:bg-surface'
+                }`}
+              >
+                <div className="text-base">🟢 100%</div>
+                <div className="text-[0.625rem] font-bold mt-0.5">Aad u Fiican</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEditTrainingScore(60)}
+                className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer text-xs font-bold ${
+                  editTrainingScore === 60
+                    ? 'bg-warning/25 border-warning text-warning ring-2 ring-warning shadow-md shadow-warning/20'
+                    : 'bg-surface-raised border-club-border text-chalk-dim hover:text-chalk hover:bg-surface'
+                }`}
+              >
+                <div className="text-base">🟡 60%</div>
+                <div className="text-[0.625rem] font-bold mt-0.5">Dhexdhexaad</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEditTrainingScore(30)}
+                className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer text-xs font-bold ${
+                  editTrainingScore === 30
+                    ? 'bg-danger/30 border-danger text-danger ring-2 ring-danger animate-pulse shadow-md shadow-danger/30'
+                    : 'bg-surface-raised border-danger/40 text-danger hover:bg-danger/15'
+                }`}
+              >
+                <div className="text-base">🔴 30%</div>
+                <div className="text-[0.625rem] font-black mt-0.5">Hooseeye (Halis) ⚠️</div>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <TextField
+              label="Goolasha (Goals)"
+              type="number"
+              value={editGoals}
+              onChange={(e) => setEditGoals(e.target.value)}
+              min={0}
+              required
+            />
+            <TextField
+              label="Caawinta (Assists)"
+              type="number"
+              value={editAssists}
+              onChange={(e) => setEditAssists(e.target.value)}
+              min={0}
+              required
+            />
+          </div>
+
+          {/* Qaladaadka Kooxda ee 3-da Qeybood */}
+          <div className="rounded-xl border border-club-border bg-pitch-deep p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-danger uppercase tracking-wider">
+                Qaladaadka Kooxda (3-da Qeybood)
+              </label>
+              <span className="text-[0.6875rem] text-chalk-dim font-bold">
+                Isugeyn:{' '}
+                <strong className="text-danger">
+                  {(parseInt(editErrorsMajor, 10) || 0) +
+                    (parseInt(editErrorsMedium, 10) || 0) +
+                    (parseInt(editErrorsSevere, 10) || 0)}
+                </strong>
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <TextField
+                label="Qalad Weyn (90%)"
+                type="number"
+                value={editErrorsMajor}
+                onChange={(e) => {
+                  setEditErrorsMajor(e.target.value)
+                  const total =
+                    (parseInt(e.target.value, 10) || 0) +
+                    (parseInt(editErrorsMedium, 10) || 0) +
+                    (parseInt(editErrorsSevere, 10) || 0)
+                  setEditErrors(String(total))
+                }}
+                min={0}
+                required
+              />
+              <TextField
+                label="Q. Dhexdhexaad (60%)"
+                type="number"
+                value={editErrorsMedium}
+                onChange={(e) => {
+                  setEditErrorsMedium(e.target.value)
+                  const total =
+                    (parseInt(editErrorsMajor, 10) || 0) +
+                    (parseInt(e.target.value, 10) || 0) +
+                    (parseInt(editErrorsSevere, 10) || 0)
+                  setEditErrors(String(total))
+                }}
+                min={0}
+                required
+              />
+              <TextField
+                label="Q. Aad u Xun (30%)"
+                type="number"
+                value={editErrorsSevere}
+                onChange={(e) => {
+                  setEditErrorsSevere(e.target.value)
+                  const total =
+                    (parseInt(editErrorsMajor, 10) || 0) +
+                    (parseInt(editErrorsMedium, 10) || 0) +
+                    (parseInt(e.target.value, 10) || 0)
+                  setEditErrors(String(total))
+                }}
+                min={0}
+                required
+              />
+            </div>
+            <p className="text-[0.625rem] text-chalk-dim m-0">
+              Qaladaadka waxaa loo kala qaaday 3 heer sida tababarka: Qalad Weyn
+              (90%), Qalad Dhexdhexaad (60%), iyo Qalad Aad u Xun (30%).
+            </p>
+          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button

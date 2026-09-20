@@ -21,6 +21,10 @@ export type RosterPlayerStatRow = {
   goals: number
   assists: number
   errors: number
+  trainingScore: number
+  errorsMajor: number
+  errorsMedium: number
+  errorsSevere: number
   xadirCount: number
   maqanCount: number
   daahayCount: number
@@ -36,7 +40,7 @@ export async function getCurrentMonthRosterStats(
   const activePlayers = await getActiveRoster()
   const { startDate, nextMonthStartDate } = getMonthDateRange(monthKey)
 
-  // Manual goals/assists/errors
+  // Manual goals/assists/errors & training/error tiers
   const manualStats = await db
     .select()
     .from(playerMonthlyStats)
@@ -45,7 +49,15 @@ export async function getCurrentMonthRosterStats(
   const manualMap = new Map(
     manualStats.map((s) => [
       s.playerId,
-      { goals: s.goals, assists: s.assists, errors: s.errors },
+      {
+        goals: s.goals,
+        assists: s.assists,
+        errors: s.errors,
+        trainingScore: s.trainingScore ?? 100,
+        errorsMajor: s.errorsMajor ?? 0,
+        errorsMedium: s.errorsMedium ?? 0,
+        errorsSevere: s.errorsSevere ?? 0,
+      },
     ]),
   )
 
@@ -84,6 +96,10 @@ export async function getCurrentMonthRosterStats(
       goals: 0,
       assists: 0,
       errors: 0,
+      trainingScore: 100,
+      errorsMajor: 0,
+      errorsMedium: 0,
+      errorsSevere: 0,
     }
     const counts = countsMap.get(player.id) ?? { xadir: 0, maqan: 0, daahay: 0 }
 
@@ -96,6 +112,10 @@ export async function getCurrentMonthRosterStats(
       goals: manual.goals,
       assists: manual.assists,
       errors: manual.errors,
+      trainingScore: manual.trainingScore,
+      errorsMajor: manual.errorsMajor,
+      errorsMedium: manual.errorsMedium,
+      errorsSevere: manual.errorsSevere,
       xadirCount: counts.xadir,
       maqanCount: counts.maqan,
       daahayCount: counts.daahay,
@@ -104,16 +124,29 @@ export async function getCurrentMonthRosterStats(
 }
 
 /**
- * Admin: Updates a player's goals, assists, and errors for a specific month.
+ * Admin: Updates a player's goals, assists, errors, training score, and error tiers for a specific month.
  */
 export async function updatePlayerMonthlyStats(input: {
   playerId: string
   monthKey: string
   goals: number
   assists: number
-  errors: number
+  errors?: number
+  trainingScore?: number
+  errorsMajor?: number
+  errorsMedium?: number
+  errorsSevere?: number
 }) {
   const db = getDatabase()
+  const eMajor = Math.max(0, input.errorsMajor ?? 0)
+  const eMed = Math.max(0, input.errorsMedium ?? 0)
+  const eSev = Math.max(0, input.errorsSevere ?? 0)
+  const totalErrors =
+    input.errors !== undefined
+      ? Math.max(0, input.errors)
+      : eMajor + eMed + eSev
+  const trainingScore =
+    input.trainingScore !== undefined ? input.trainingScore : 100
 
   const [saved] = await db
     .insert(playerMonthlyStats)
@@ -122,14 +155,22 @@ export async function updatePlayerMonthlyStats(input: {
       monthKey: input.monthKey,
       goals: Math.max(0, input.goals),
       assists: Math.max(0, input.assists),
-      errors: Math.max(0, input.errors),
+      errors: totalErrors,
+      trainingScore,
+      errorsMajor: eMajor,
+      errorsMedium: eMed,
+      errorsSevere: eSev,
     })
     .onConflictDoUpdate({
       target: [playerMonthlyStats.playerId, playerMonthlyStats.monthKey],
       set: {
         goals: Math.max(0, input.goals),
         assists: Math.max(0, input.assists),
-        errors: Math.max(0, input.errors),
+        errors: totalErrors,
+        trainingScore,
+        errorsMajor: eMajor,
+        errorsMedium: eMed,
+        errorsSevere: eSev,
         updatedAt: new Date(),
       },
     })
@@ -189,6 +230,10 @@ export async function getPlayerMonthlyStats(
     goals: manual?.goals ?? 0,
     assists: manual?.assists ?? 0,
     errors: manual?.errors ?? 0,
+    trainingScore: manual?.trainingScore ?? 100,
+    errorsMajor: manual?.errorsMajor ?? 0,
+    errorsMedium: manual?.errorsMedium ?? 0,
+    errorsSevere: manual?.errorsSevere ?? 0,
     xadirCount: xadir,
     maqanCount: maqan,
     daahayCount: daahay,

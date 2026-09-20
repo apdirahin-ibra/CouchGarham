@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertCircle,
+  AlertTriangle,
   Award,
   Bell,
   Calendar,
@@ -9,6 +10,7 @@ import {
   ChevronRight,
   Clock,
   DollarSign,
+  Flame,
   History,
   Info,
   Lightbulb,
@@ -16,6 +18,7 @@ import {
   Pause,
   Play,
   RefreshCw,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Star,
@@ -41,6 +44,7 @@ import {
 import {
   Button,
   Dialog,
+  MatchAlarmBanner,
   SectionTitle,
   StarRating,
   StatTile,
@@ -152,6 +156,10 @@ export function PlayerDashboardTab({
     goals: 0,
     assists: 0,
     errors: 0,
+    trainingScore: 100,
+    errorsMajor: 0,
+    errorsMedium: 0,
+    errorsSevere: 0,
     xadirCount: 0,
     maqanCount: 0,
     daahayCount: 0,
@@ -218,6 +226,14 @@ export function PlayerDashboardTab({
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Digniinta Ciyaarta & Botonka Boodboodaya (Match Imminent Alarm Banner) */}
+      {dashboard?.upcomingMatchAlert ? (
+        <MatchAlarmBanner
+          alert={dashboard.upcomingMatchAlert}
+          onNavigateToTab={onNavigateToTab}
+        />
+      ) : null}
+
       {/* Header Pass Card */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-gold/40 bg-gradient-to-r from-surface-raised via-pitch-deep to-surface-raised p-4 shadow-lg relative overflow-hidden">
         <div className="flex items-center gap-3">
@@ -729,6 +745,177 @@ export function PlayerDashboardTab({
         </div>
       </TicketCard>
 
+      {/* Natiijada Tababarka (Heerka Aalamiitada: 100%, 60%, 30% Halis) */}
+      <TicketCard
+        className={`p-4 sm:p-5 space-y-3.5 border-2 transition-all ${
+          (stats.trainingScore ?? 100) <= 30
+            ? 'border-danger/90 bg-gradient-to-br from-danger/25 via-pitch-deep to-surface-raised shadow-danger/30 shadow-xl'
+            : (stats.trainingScore ?? 100) <= 60
+              ? 'border-warning/60 bg-gradient-to-br from-warning/15 via-pitch-deep to-surface-raised'
+              : 'border-success/50 bg-gradient-to-br from-success/10 via-pitch-deep to-surface-raised'
+        }`}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border font-bold ${
+                (stats.trainingScore ?? 100) <= 30
+                  ? 'bg-danger/25 text-danger border-danger/70 animate-pulse'
+                  : (stats.trainingScore ?? 100) <= 60
+                    ? 'bg-warning/20 text-warning border-warning/40'
+                    : 'bg-success/20 text-success border-success/40'
+              }`}
+            >
+              {(stats.trainingScore ?? 100) <= 30 ? (
+                <ShieldAlert className="h-6 w-6" />
+              ) : (stats.trainingScore ?? 100) <= 60 ? (
+                <AlertTriangle className="h-6 w-6" />
+              ) : (
+                <CheckCircle className="h-6 w-6" />
+              )}
+            </div>
+            <div>
+              <SectionTitle eyebrow="QIIMEYNTA & DIIWAANKA" as="h3">
+                Natiijada Tababarkaaga
+              </SectionTitle>
+              <span className="text-xs text-chalk-dim">
+                Heerka aalamiitadaada tababarka • Bishan ({currentMonth})
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <StatusBadge
+              tone={
+                (stats.trainingScore ?? 100) <= 30
+                  ? 'danger'
+                  : (stats.trainingScore ?? 100) <= 60
+                    ? 'warning'
+                    : 'success'
+              }
+              className={`text-xs font-black py-1.5 px-3 uppercase tracking-wider ${
+                (stats.trainingScore ?? 100) <= 30
+                  ? 'animate-pulse border-2 border-danger'
+                  : ''
+              }`}
+            >
+              {(stats.trainingScore ?? 100) <= 30
+                ? '🔴 Hooseeye (30%) - QATAR / HALIS'
+                : (stats.trainingScore ?? 100) <= 60
+                  ? '🟡 Dhexdhexaad (60%)'
+                  : '🟢 Aad u Fiican (100%)'}
+            </StatusBadge>
+          </div>
+        </div>
+
+        {/* 3-Tier Visual Progress Gauge */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex justify-between text-[0.6875rem] font-bold">
+            <span
+              className={`flex items-center gap-1 ${
+                (stats.trainingScore ?? 100) <= 30
+                  ? 'text-danger font-black underline'
+                  : 'text-danger/80'
+              }`}
+            >
+              <span>30% Hooseeye (Halis)</span>
+            </span>
+            <span
+              className={`flex items-center gap-1 ${
+                (stats.trainingScore ?? 100) > 30 && (stats.trainingScore ?? 100) <= 60
+                  ? 'text-warning font-black underline'
+                  : 'text-warning/80'
+              }`}
+            >
+              <span>60% Dhexdhexaad</span>
+            </span>
+            <span
+              className={`flex items-center gap-1 ${
+                (stats.trainingScore ?? 100) > 60
+                  ? 'text-success font-black underline'
+                  : 'text-success/80'
+              }`}
+            >
+              <span>100% Aad u Fiican</span>
+            </span>
+          </div>
+
+          <div className="h-3.5 w-full bg-pitch-deep rounded-full overflow-hidden p-0.5 border border-club-border flex gap-1 shadow-inner">
+            {/* 30% segment */}
+            <div
+              className={`h-full rounded-l-full transition-all duration-500 ${
+                (stats.trainingScore ?? 100) >= 30
+                  ? (stats.trainingScore ?? 100) <= 30
+                    ? 'bg-danger animate-pulse shadow-md shadow-danger/50 flex-1'
+                    : 'bg-danger/80 flex-1'
+                  : 'bg-surface flex-1 opacity-40'
+              }`}
+            />
+            {/* 60% segment */}
+            <div
+              className={`h-full transition-all duration-500 ${
+                (stats.trainingScore ?? 100) >= 60
+                  ? (stats.trainingScore ?? 100) <= 60
+                    ? 'bg-warning shadow-md shadow-warning/50 flex-1'
+                    : 'bg-warning/80 flex-1'
+                  : 'bg-surface flex-1 opacity-40'
+              }`}
+            />
+            {/* 100% segment */}
+            <div
+              className={`h-full rounded-r-full transition-all duration-500 ${
+                (stats.trainingScore ?? 100) >= 100
+                  ? 'bg-success shadow-md shadow-success/50 flex-1'
+                  : 'bg-surface flex-1 opacity-40'
+              }`}
+            />
+          </div>
+        </div>
+
+        {/* Warning / Motivation Notice */}
+        {(stats.trainingScore ?? 100) <= 30 ? (
+          <div className="rounded-xl border-2 border-danger bg-danger/15 p-3.5 flex items-start gap-2.5 text-xs text-chalk animate-pulse">
+            <Flame className="h-5 w-5 text-danger shrink-0 mt-0.5" />
+            <div>
+              <strong className="block font-black text-danger uppercase tracking-wider text-xs">
+                ⚠️ DIGNIIN ADAG: HEERKA TABABARKAAGU WAA HALIS (30%)!
+              </strong>
+              <p className="mt-1 m-0 text-chalk leading-relaxed">
+                Heerka tababarkaagu aad buu u hooseeyaa. Waxaad ku jirtaa xaalad
+                khatar ah oo sababi karta in lagaa reebo shaxda koowaad ama
+                ganaax lagu saaro. Fadlan xilliga imaada oo tababarka hagaaji!
+              </p>
+            </div>
+          </div>
+        ) : (stats.trainingScore ?? 100) <= 60 ? (
+          <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 flex items-start gap-2 text-xs text-chalk">
+            <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+            <div>
+              <strong className="block font-bold text-warning">
+                Heer Dhexdhexaad ah (60%):
+              </strong>
+              <p className="m-0 text-chalk-dim leading-relaxed">
+                Tababarkaagu wuxuu u baahan yahay horumarin dheeraad ah si aad u
+                gaarto 100% oo aad boos joogto ah uga hesho kooxda.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-success/40 bg-success/10 p-3 flex items-start gap-2 text-xs text-chalk">
+            <CheckCircle className="h-4 w-4 text-success shrink-0 mt-0.5" />
+            <div>
+              <strong className="block font-bold text-success">
+                Heer Sare oo Buuxa (100%):
+              </strong>
+              <p className="m-0 text-chalk-dim leading-relaxed">
+                Dadaalkaaga iyo joogteyntaada tababarka waa mid aad u sarreeya.
+                Sii wad anshaxa iyo shaqada wanaagsan!
+              </p>
+            </div>
+          </div>
+        )}
+      </TicketCard>
+
       <div>
         <SectionTitle eyebrow="NATIIJADAADA BISHA" as="h3">
           Xogtaada Bishan ({currentMonth})
@@ -738,6 +925,75 @@ export function PlayerDashboardTab({
           <StatTile label="Goolal" value={stats.goals} detail="Bishan" />
           <StatTile label="Caawin" value={stats.assists} detail="Bishan" />
           <StatTile label="Qaladaad" value={stats.errors} detail="Bishan" />
+        </div>
+
+        {/* Qaladaadka Kooxda ee 3-da Qeybood (90%, 60%, 30%) */}
+        <div className="mt-3 rounded-xl border border-club-border bg-surface-raised p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-gold flex items-center gap-1.5">
+              <ShieldAlert className="h-3.5 w-3.5 text-danger" />
+              <span>Faahfaahinta Qaladaadka Kooxda (3-da Heer)</span>
+            </span>
+            <span className="text-[0.6875rem] font-bold text-chalk-dim">
+              Isugeyn: <strong className="text-danger">{stats.errors}</strong>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            {/* Qalad Weyn 90% */}
+            <div className="rounded-lg border border-danger/40 bg-pitch-deep p-2.5 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-danger text-[0.6875rem] uppercase">
+                  Qalad Weyn
+                </span>
+                <span className="px-1.5 py-0.5 rounded text-[0.625rem] font-bold bg-danger/20 text-danger border border-danger/30">
+                  90%
+                </span>
+              </div>
+              <strong className="text-lg font-display font-bold text-chalk block">
+                {stats.errorsMajor || 0}
+              </strong>
+              <p className="text-[0.625rem] text-chalk-dim m-0 leading-tight">
+                Qalad taatiko ama difaac oo halis galiyay goolka kooxda.
+              </p>
+            </div>
+
+            {/* Qalad Dhexdhexaad 60% */}
+            <div className="rounded-lg border border-warning/40 bg-pitch-deep p-2.5 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-warning text-[0.6875rem] uppercase">
+                  Qalad Dhexdhexaad
+                </span>
+                <span className="px-1.5 py-0.5 rounded text-[0.625rem] font-bold bg-warning/20 text-warning border border-warning/30">
+                  60%
+                </span>
+              </div>
+              <strong className="text-lg font-display font-bold text-chalk block">
+                {stats.errorsMedium || 0}
+              </strong>
+              <p className="text-[0.625rem] text-chalk-dim m-0 leading-tight">
+                Baas lumay, luminta booska ama qalad farsamo.
+              </p>
+            </div>
+
+            {/* Qalad Aad u Xun 30% */}
+            <div className="rounded-lg border border-danger/60 bg-danger/10 p-2.5 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-danger text-[0.6875rem] uppercase">
+                  Qalad Aad u Xun
+                </span>
+                <span className="px-1.5 py-0.5 rounded text-[0.625rem] font-bold bg-danger/30 text-danger border border-danger/50">
+                  30%
+                </span>
+              </div>
+              <strong className="text-lg font-display font-bold text-danger block">
+                {stats.errorsSevere || 0}
+              </strong>
+              <p className="text-[0.625rem] text-chalk-dim m-0 leading-tight">
+                Qalad anshax xumo, kaar casaan ama gool si sahlan looga dhaliyay.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

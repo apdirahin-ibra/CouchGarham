@@ -22,6 +22,10 @@ export const playerMonthlyStats = pgTable(
     goals: integer('goals').default(0).notNull(),
     assists: integer('assists').default(0).notNull(),
     errors: integer('errors').default(0).notNull(),
+    trainingScore: integer('training_score').default(100).notNull(),
+    errorsMajor: integer('errors_major').default(0).notNull(),
+    errorsMedium: integer('errors_medium').default(0).notNull(),
+    errorsSevere: integer('errors_severe').default(0).notNull(),
     ...auditColumns(),
   },
   (table) => [

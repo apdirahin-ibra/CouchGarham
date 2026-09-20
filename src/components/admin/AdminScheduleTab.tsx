@@ -27,6 +27,9 @@ type ScheduleItem = {
   dayName: string
   timeText: string
   place: string
+  eventType?: string | null
+  opponent?: string | null
+  matchDate?: string | null
 }
 
 export function AdminScheduleTab({
@@ -51,6 +54,9 @@ export function AdminScheduleTab({
   const [dayName, setDayName] = useState<string>('Isniin')
   const [timeText, setTimeText] = useState('')
   const [place, setPlace] = useState('')
+  const [eventType, setEventType] = useState<'tababar' | 'ciyaar'>('tababar')
+  const [opponent, setOpponent] = useState('')
+  const [matchDate, setMatchDate] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
   const loadSchedules = useCallback(async () => {
@@ -97,6 +103,9 @@ export function AdminScheduleTab({
     setDayName('Isniin')
     setTimeText('4:30 PM - 6:30 PM')
     setPlace('Garoonka Weyn ee Degmada')
+    setEventType('tababar')
+    setOpponent('')
+    setMatchDate('')
     setIsModalOpen(true)
   }
 
@@ -105,6 +114,9 @@ export function AdminScheduleTab({
     setDayName(item.dayName)
     setTimeText(item.timeText)
     setPlace(item.place)
+    setEventType(item.eventType === 'ciyaar' ? 'ciyaar' : 'tababar')
+    setOpponent(item.opponent || '')
+    setMatchDate(item.matchDate || '')
     setIsModalOpen(true)
   }
 
@@ -113,32 +125,45 @@ export function AdminScheduleTab({
     if (!timeText.trim() || !place.trim() || !token) return
     setIsSaving(true)
 
+    const payload = {
+      sessionToken: token,
+      dayName,
+      timeText: timeText.trim(),
+      place: place.trim(),
+      eventType,
+      opponent: eventType === 'ciyaar' && opponent.trim() ? opponent.trim() : null,
+      matchDate:
+        eventType === 'ciyaar' && matchDate.trim() ? matchDate.trim() : null,
+    }
+
     try {
       if (editingSchedule) {
         const updated = await updateScheduleEntryFn({
           data: {
-            sessionToken: token,
+            ...payload,
             id: editingSchedule.id,
-            dayName,
-            timeText: timeText.trim(),
-            place: place.trim(),
           },
         })
         setSchedules((current) =>
           current.map((s) => (s.id === editingSchedule.id ? updated : s)),
         )
-        notify('Jadwalka tababarka waa la cusbooneysiiyay', 'success')
+        notify(
+          eventType === 'ciyaar'
+            ? 'Ciyaarta jadwalka waa la cusbooneysiiyay!'
+            : 'Jadwalka tababarka waa la cusbooneysiiyay',
+          'success',
+        )
       } else {
         const created = await createScheduleEntryFn({
-          data: {
-            sessionToken: token,
-            dayName,
-            timeText: timeText.trim(),
-            place: place.trim(),
-          },
+          data: payload,
         })
         setSchedules((current) => [...current, created])
-        notify('Jadwal cusub ayaa lagu daray', 'success')
+        notify(
+          eventType === 'ciyaar'
+            ? 'Ciyaar cusub ayaa lagu daray jadwalka!'
+            : 'Jadwal cusub ayaa lagu daray',
+          'success',
+        )
       }
       setIsModalOpen(false)
     } catch (err: any) {
@@ -213,7 +238,7 @@ export function AdminScheduleTab({
               <TicketCard key={schedule.id} className="p-4 space-y-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         type="button"
                         onClick={() =>
@@ -230,9 +255,24 @@ export function AdminScheduleTab({
                       <strong className="text-sm font-semibold text-chalk">
                         {schedule.timeText}
                       </strong>
+                      {schedule.eventType === 'ciyaar' ? (
+                        <span className="rounded-full border border-danger/40 bg-danger/15 px-2 py-0.5 text-[0.6875rem] font-bold text-danger animate-pulse flex items-center gap-1">
+                          ⚽ CIYAAR RASMI AH
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[0.6875rem] font-medium text-gold">
+                          🏃 TABABAR
+                        </span>
+                      )}
                     </div>
+                    {schedule.eventType === 'ciyaar' && schedule.opponent ? (
+                      <div className="mt-1 text-xs font-semibold text-amber-300">
+                        VS {schedule.opponent}
+                        {schedule.matchDate ? ` (${schedule.matchDate})` : ''}
+                      </div>
+                    ) : null}
                     <div className="mt-2 flex items-center gap-1.5 text-xs text-chalk-dim">
-                      <MapPin className="h-3.5 w-3.5 text-gold" />
+                      <MapPin className="h-3.5 w-3.5 text-gold shrink-0" />
                       <span>{schedule.place}</span>
                     </div>
                   </div>
@@ -342,6 +382,36 @@ export function AdminScheduleTab({
         <form onSubmit={handleSaveSchedule} className="space-y-3.5">
           <div>
             <label className="mb-1 block text-xs font-bold text-chalk">
+              Nooca Dhacdada (Event Type) *
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setEventType('tababar')}
+                className={`rounded-lg border px-3 py-2 text-xs font-bold transition-all ${
+                  eventType === 'tababar'
+                    ? 'border-gold bg-gold/20 text-gold shadow-sm'
+                    : 'border-club-border bg-pitch-deep text-chalk-dim hover:text-chalk'
+                }`}
+              >
+                🏃 Tababar Caadi ah
+              </button>
+              <button
+                type="button"
+                onClick={() => setEventType('ciyaar')}
+                className={`rounded-lg border px-3 py-2 text-xs font-bold transition-all ${
+                  eventType === 'ciyaar'
+                    ? 'border-danger bg-danger/20 text-danger shadow-sm animate-pulse'
+                    : 'border-club-border bg-pitch-deep text-chalk-dim hover:text-chalk'
+                }`}
+              >
+                ⚽ Ciyaar Rasmi ah (Match)
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-bold text-chalk">
               Maalinta Todobaadka *
             </label>
             <select
@@ -357,8 +427,26 @@ export function AdminScheduleTab({
             </select>
           </div>
 
+          {eventType === 'ciyaar' && (
+            <>
+              <TextField
+                label="Kooxda Kasoo Horjeeda (Opponent Team) *"
+                value={opponent}
+                onChange={(e) => setOpponent(e.target.value)}
+                placeholder="e.g. Banaadir FC ama Horseed SC"
+                required
+              />
+              <TextField
+                label="Taariikhda Kulanka (Ikhtiyaari - YYYY-MM-DD)"
+                value={matchDate}
+                onChange={(e) => setMatchDate(e.target.value)}
+                placeholder="e.g. 2026-09-21"
+              />
+            </>
+          )}
+
           <TextField
-            label="Waqtiga Tababarka *"
+            label="Waqtiga Tababarka / Ciyaarta *"
             value={timeText}
             onChange={(e) => setTimeText(e.target.value)}
             placeholder="e.g. 4:30 PM - 6:30 PM"

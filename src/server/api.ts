@@ -419,7 +419,11 @@ export const updatePlayerMonthlyStatsFn = createServerFn({ method: 'POST' })
       monthKey: string
       goals: number
       assists: number
-      errors: number
+      errors?: number
+      trainingScore?: number
+      errorsMajor?: number
+      errorsMedium?: number
+      errorsSevere?: number
     }) =>
       z
         .object({
@@ -428,7 +432,11 @@ export const updatePlayerMonthlyStatsFn = createServerFn({ method: 'POST' })
           monthKey: z.string().regex(/^\d{4}-\d{2}$/),
           goals: z.number().int().min(0).max(999),
           assists: z.number().int().min(0).max(999),
-          errors: z.number().int().min(0).max(999),
+          errors: z.number().int().min(0).max(999).optional(),
+          trainingScore: z.number().int().min(0).max(100).optional(),
+          errorsMajor: z.number().int().min(0).max(999).optional(),
+          errorsMedium: z.number().int().min(0).max(999).optional(),
+          errorsSevere: z.number().int().min(0).max(999).optional(),
         })
         .parse(data),
   )
@@ -715,6 +723,9 @@ export const createScheduleEntryFn = createServerFn({ method: 'POST' })
       dayName: string
       timeText: string
       place: string
+      eventType?: 'tababar' | 'ciyaar'
+      opponent?: string | null
+      matchDate?: string | null
     }) =>
       z
         .object({
@@ -722,6 +733,9 @@ export const createScheduleEntryFn = createServerFn({ method: 'POST' })
           dayName: z.string().trim().min(2).max(50),
           timeText: z.string().trim().min(2).max(100),
           place: z.string().trim().min(2).max(150),
+          eventType: z.enum(['tababar', 'ciyaar']).optional().default('tababar'),
+          opponent: z.string().trim().max(255).optional().nullable(),
+          matchDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
         })
         .parse(data),
   )
@@ -739,6 +753,9 @@ export const updateScheduleEntryFn = createServerFn({ method: 'POST' })
       dayName: string
       timeText: string
       place: string
+      eventType?: 'tababar' | 'ciyaar'
+      opponent?: string | null
+      matchDate?: string | null
     }) =>
       z
         .object({
@@ -747,6 +764,9 @@ export const updateScheduleEntryFn = createServerFn({ method: 'POST' })
           dayName: z.string().trim().min(2).max(50),
           timeText: z.string().trim().min(2).max(100),
           place: z.string().trim().min(2).max(150),
+          eventType: z.enum(['tababar', 'ciyaar']).optional().default('tababar'),
+          opponent: z.string().trim().max(255).optional().nullable(),
+          matchDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
         })
         .parse(data),
   )

@@ -8,6 +8,13 @@
       "when": 1788090367647,
       "tag": "0000_mixed_major_mapleleaf",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789892468780,
+      "tag": "0001_vengeful_goblin_queen",
+      "breakpoints": true
     }
   ]
 }

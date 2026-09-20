@@ -18,7 +18,7 @@ import {
   getTodayDateString,
 } from '../../lib/dates'
 import { getAdminDashboardFn } from '../../server/api'
-import { Button, Dialog, SectionTitle, StatTile, TicketCard } from '../ui'
+import { Button, Dialog, MatchAlarmBanner, SectionTitle, StatTile, TicketCard } from '../ui'
 
 type AttendanceListType = 'xadir' | 'maqan' | 'daahay' | 'unrecorded' | null
 
@@ -145,6 +145,14 @@ export function AdminDashboardTab({
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Digniinta Ciyaarta & Botonka Boodboodaya (Admin Match Alarm Alert) */}
+      {dashboardData?.upcomingMatchAlert ? (
+        <MatchAlarmBanner
+          alert={dashboardData.upcomingMatchAlert}
+          onNavigateToTab={onNavigateToTab}
+        />
+      ) : null}
+
       <div className="rounded-xl border border-gold/30 bg-surface-raised p-4 shadow-md">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gold">
           <Calendar className="h-4 w-4" />

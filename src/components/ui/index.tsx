@@ -321,3 +321,4 @@ export function StateMessage({
 }
 
 export { StarRating } from './StarRating'
+export { MatchAlarmBanner } from './MatchAlarmBanner'

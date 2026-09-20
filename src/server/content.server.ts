@@ -38,6 +38,7 @@ import {
   getPlayerMatchRatingsHistory,
   getPlayerMonthlyStats,
 } from './stats.server'
+import { getUpcomingMatchAlert } from './schedule.server'
 import { resolveStorageUrl, VOICE_BUCKET } from './storage.server'
 
 /* ==================== WAANO (TIPS) ==================== */
@@ -312,7 +313,7 @@ export async function getAdminDashboardSummary() {
   const today = getTodayDateString()
   const currentMonth = getCurrentMonthKey()
 
-  const [todayAttendance, recentLogins, monthStats, requestsInbox] =
+  const [todayAttendance, recentLogins, monthStats, requestsInbox, upcomingMatchAlert] =
     await Promise.all([
       getAttendanceForDate(today),
       db.select().from(loginLogs).orderBy(desc(loginLogs.loggedInAt)).limit(10),
@@ -325,6 +326,7 @@ export async function getAdminDashboardSummary() {
         .from(playerMonthlyStats)
         .where(eq(playerMonthlyStats.monthKey, currentMonth)),
       getRequestsInboxAdmin(),
+      getUpcomingMatchAlert(),
     ])
 
   const xadirList = todayAttendance.filter((p) => p.status === 'xadir')
@@ -347,6 +349,7 @@ export async function getAdminDashboardSummary() {
     today,
     formattedToday: formatSomaliDate(today),
     currentMonth,
+    upcomingMatchAlert,
     attendanceCounts: {
       total: todayAttendance.length,
       xadir: xadirList.length,
@@ -393,6 +396,7 @@ export async function getPlayerDashboardSummary(playerId: string) {
     topTipRecord,
     latestPhotoRecord,
     playerRecord,
+    upcomingMatchAlert,
   ] = await Promise.all([
     getClubSettings(),
     getPlayerMonthlyStats(playerId),
@@ -422,6 +426,7 @@ export async function getPlayerDashboardSummary(playerId: string) {
       .from(players)
       .where(eq(players.id, playerId))
       .limit(1),
+    getUpcomingMatchAlert(),
   ])
 
   const usedThisMonth = leaves.filter(
@@ -503,5 +508,6 @@ export async function getPlayerDashboardSummary(playerId: string) {
     topTip,
     keyRule,
     latestPhoto,
+    upcomingMatchAlert,
   }
 }

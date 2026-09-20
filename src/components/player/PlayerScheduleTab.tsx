@@ -10,6 +10,9 @@ type ScheduleItem = {
   dayName: string
   timeText: string
   place: string
+  eventType?: string | null
+  opponent?: string | null
+  matchDate?: string | null
 }
 
 export function PlayerScheduleTab({
@@ -79,15 +82,26 @@ export function PlayerScheduleTab({
         <div className="space-y-3">
           {schedules.map((schedule) => (
             <TicketCard key={schedule.id} className="p-4 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => onNavigateToTab?.('attendance')}
-                  className="rounded-md bg-gold/20 border border-gold px-2.5 py-0.5 font-display text-sm font-bold text-gold hover:bg-gold hover:text-pitch transition-all cursor-pointer"
-                  title="Guji si aad u aragto xaadiriskaaga"
-                >
-                  {schedule.dayName}
-                </button>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToTab?.('attendance')}
+                    className="rounded-md bg-gold/20 border border-gold px-2.5 py-0.5 font-display text-sm font-bold text-gold hover:bg-gold hover:text-pitch transition-all cursor-pointer"
+                    title="Guji si aad u aragto xaadiriskaaga"
+                  >
+                    {schedule.dayName}
+                  </button>
+                  {schedule.eventType === 'ciyaar' ? (
+                    <span className="rounded-full border border-danger/40 bg-danger/15 px-2 py-0.5 text-[0.6875rem] font-bold text-danger animate-pulse flex items-center gap-1">
+                      ⚽ CIYAAR RASMI AH
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-gold/30 bg-gold/10 px-2 py-0.5 text-[0.6875rem] font-medium text-gold">
+                      🏃 TABABAR
+                    </span>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1 text-xs text-chalk font-semibold">
@@ -106,6 +120,13 @@ export function PlayerScheduleTab({
                   ) : null}
                 </div>
               </div>
+
+              {schedule.eventType === 'ciyaar' && schedule.opponent ? (
+                <div className="text-xs font-semibold text-amber-300">
+                  VS {schedule.opponent}
+                  {schedule.matchDate ? ` (${schedule.matchDate})` : ''}
+                </div>
+              ) : null}
 
               <div className="flex items-center gap-1.5 text-xs text-chalk-dim pt-1 border-t border-club-border">
                 <MapPin className="h-3.5 w-3.5 text-gold shrink-0" />
