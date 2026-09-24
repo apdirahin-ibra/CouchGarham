@@ -76,7 +76,9 @@ export function MatchAlarmBanner({
   const { notify } = useToast()
   const isAdmin = user?.role === 'admin'
 
-  const [currentAlert, setCurrentAlert] = useState<UpcomingMatchAlert | null | undefined>(alert)
+  const [currentAlert, setCurrentAlert] = useState<
+    UpcomingMatchAlert | null | undefined
+  >(alert)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [isAudioActive, setIsAudioActive] = useState(false)
   const [adminCustomInput, setAdminCustomInput] = useState('')
@@ -86,6 +88,13 @@ export function MatchAlarmBanner({
   useEffect(() => {
     setCurrentAlert(alert)
   }, [alert])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [])
 
   const effectiveAlert = currentAlert || alert
 
@@ -148,13 +157,6 @@ export function MatchAlarmBanner({
       }, 4000)
     }
   }
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [])
 
   // Theme styling based on urgency level
   const isEmergency = isMatchDay || isWithin12Hours
@@ -233,7 +235,8 @@ export function MatchAlarmBanner({
                 <span className="flex items-center gap-1 font-medium text-chalk">
                   <Calendar className="h-3.5 w-3.5 text-gold" />
                   <span>
-                    {dayName} {matchDate ? `(${formatSomaliDate(matchDate)})` : ''}
+                    {dayName}{' '}
+                    {matchDate ? `(${formatSomaliDate(matchDate)})` : ''}
                   </span>
                 </span>
 
@@ -318,8 +321,8 @@ export function MatchAlarmBanner({
               {matchTitle}
             </h4>
             <p className="text-xs text-chalk-dim max-w-sm mx-auto">
-              Dhammaan ciyaartoyda naadiga waxaa lagu wargelinayaa inay si buuxda
-              ugu diyaargaroobaan kulankaan muhiimka ah.
+              Dhammaan ciyaartoyda naadiga waxaa lagu wargelinayaa inay si
+              buuxda ugu diyaargaroobaan kulankaan muhiimka ah.
             </p>
           </div>
 
@@ -330,8 +333,7 @@ export function MatchAlarmBanner({
                 <span>Maalinta & Taariikhda:</span>
               </span>
               <strong className="text-chalk font-semibold">
-                {dayName}{' '}
-                {matchDate ? `(${formatSomaliDate(matchDate)})` : ''}
+                {dayName} {matchDate ? `(${formatSomaliDate(matchDate)})` : ''}
               </strong>
             </div>
 
@@ -369,7 +371,9 @@ export function MatchAlarmBanner({
             </span>
             <ul className="space-y-1.5 text-chalk-dim list-disc pl-4">
               <li>Imaan ugu yaraan 30 daqiiqo ka hor bilowga kulanka.</li>
-              <li>Wadashada qalabka buuxa (garoorka, kabaha, iyo shin pads).</li>
+              <li>
+                Wadashada qalabka buuxa (garoorka, kabaha, iyo shin pads).
+              </li>
               <li>Anshaxa ciyaarta iyo adeecidda talooyinka macallinka.</li>
             </ul>
           </div>
@@ -380,7 +384,9 @@ export function MatchAlarmBanner({
               <div className="flex items-center justify-between">
                 <span className="font-bold text-danger uppercase tracking-wider block text-[0.6875rem] flex items-center gap-1.5">
                   <Flame className="h-4 w-4" />
-                  <span>⚙️ Deji Waqtiga ka Dhiman Ciyaarta (Admin Live Settings)</span>
+                  <span>
+                    ⚙️ Deji Waqtiga ka Dhiman Ciyaarta (Admin Live Settings)
+                  </span>
                 </span>
                 <span className="text-[0.625rem] text-gold font-bold">
                   Toos u gal dhammaan ciyaartoyda

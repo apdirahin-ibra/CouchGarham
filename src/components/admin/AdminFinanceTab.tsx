@@ -588,7 +588,8 @@ export function AdminFinanceTab() {
                   Xaaladda Lacagta ee Ciyaartoy Kasta
                 </SectionTitle>
                 <p className="text-xs text-chalk-dim m-0">
-                  U isticmaal badhamada degdegga ah ee Sax (✅ Dhiibay) iyo Khalad (❌ Ma Dhiibin) si xisaabtu si toos ah isugu darto.
+                  U isticmaal badhamada degdegga ah ee Sax (✅ Dhiibay) iyo
+                  Khalad (❌ Ma Dhiibin) si xisaabtu si toos ah isugu darto.
                 </p>
               </div>
 
@@ -662,7 +663,20 @@ export function AdminFinanceTab() {
                           ) : null}
                         </div>
                         <span className="text-xs text-chalk-dim">
-                          Laga rabo: <strong className="text-chalk font-semibold">${player.expectedAmount.toFixed(2)}</strong> • Dhiibay: <strong className={player.paidAmount > 0 ? 'text-success font-semibold' : 'text-chalk font-semibold'}>${player.paidAmount.toFixed(2)}</strong>
+                          Laga rabo:{' '}
+                          <strong className="text-chalk font-semibold">
+                            ${player.expectedAmount.toFixed(2)}
+                          </strong>{' '}
+                          • Dhiibay:{' '}
+                          <strong
+                            className={
+                              player.paidAmount > 0
+                                ? 'text-success font-semibold'
+                                : 'text-chalk font-semibold'
+                            }
+                          >
+                            ${player.paidAmount.toFixed(2)}
+                          </strong>
                         </span>
                         {player.paidAt && player.status === 'paid' ? (
                           <span className="block text-[0.6875rem] text-success italic mt-0.5">
@@ -695,7 +709,9 @@ export function AdminFinanceTab() {
                         title={`Xaqiiji inuu dhiibay $${player.expectedAmount.toFixed(2)}`}
                       >
                         <Check className="h-3.5 w-3.5" />
-                        <span>Dhiibay (${player.expectedAmount.toFixed(2)})</span>
+                        <span>
+                          Dhiibay (${player.expectedAmount.toFixed(2)})
+                        </span>
                       </Button>
 
                       {/* Button 2: Khalad (Ma Dhiibin) */}
@@ -894,7 +910,9 @@ export function AdminFinanceTab() {
               required
             />
             <p className="mt-1.5 text-[0.6875rem] text-chalk-dim leading-relaxed">
-              Tusaale: Haddii aad qorto <strong>0.50</strong>, Ali iyo ciyaartoy kasta waxaa bishan laga rabi doonaa <strong>$0.50</strong>. Xisaabiyaashuna si toos ah ayay isu cusbooneysiin doonaan.
+              Tusaale: Haddii aad qorto <strong>0.50</strong>, Ali iyo ciyaartoy
+              kasta waxaa bishan laga rabi doonaa <strong>$0.50</strong>.
+              Xisaabiyaashuna si toos ah ayay isu cusbooneysiin doonaan.
             </p>
           </div>
 

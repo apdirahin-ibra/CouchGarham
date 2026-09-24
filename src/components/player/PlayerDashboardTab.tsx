@@ -296,7 +296,10 @@ export function PlayerDashboardTab({
                 </span>
               </div>
               <p className="text-xs text-chalk line-clamp-2 italic font-medium leading-relaxed">
-                "{dashboard?.latestChatMessage?.text || 'Kusoo dhowaada wadahadalka kooxda...'}"
+                "
+                {dashboard?.latestChatMessage?.text ||
+                  'Kusoo dhowaada wadahadalka kooxda...'}
+                "
               </p>
             </div>
             <div className="mt-3 pt-2 border-t border-club-border/60 flex items-center justify-between text-[0.6875rem]">
@@ -327,7 +330,10 @@ export function PlayerDashboardTab({
                 </span>
               </div>
               <p className="text-xs text-chalk line-clamp-2 font-medium leading-relaxed">
-                "{dashboard?.topTip?.text || 'Joogteynta tababarka iyo anshaxa waa furaha guusha.'}"
+                "
+                {dashboard?.topTip?.text ||
+                  'Joogteynta tababarka iyo anshaxa waa furaha guusha.'}
+                "
               </p>
             </div>
             <div className="mt-3 pt-2 border-t border-club-border/60 flex items-center justify-between text-[0.6875rem]">
@@ -358,7 +364,10 @@ export function PlayerDashboardTab({
                 </span>
               </div>
               <p className="text-xs text-chalk line-clamp-2 font-medium leading-relaxed">
-                "{dashboard?.keyRule || 'Ixtiraamka waqtiga, macallinka, iyo asxaabta kooxda waa waajib muqadas ah.'}"
+                "
+                {dashboard?.keyRule ||
+                  'Ixtiraamka waqtiga, macallinka, iyo asxaabta kooxda waa waajib muqadas ah.'}
+                "
               </p>
             </div>
             <div className="mt-3 pt-2 border-t border-club-border/60 flex items-center justify-between text-[0.6875rem]">
@@ -389,7 +398,8 @@ export function PlayerDashboardTab({
                 </span>
               </div>
               <p className="text-xs text-chalk line-clamp-2 font-medium leading-relaxed">
-                {dashboard?.latestPhoto?.caption || 'Muuqaallada iyo sawirrada tababarrada naadiga.'}
+                {dashboard?.latestPhoto?.caption ||
+                  'Muuqaallada iyo sawirrada tababarrada naadiga.'}
               </p>
             </div>
             <div className="mt-3 pt-2 border-t border-club-border/60 flex items-center justify-between text-[0.6875rem]">
@@ -822,7 +832,8 @@ export function PlayerDashboardTab({
             </span>
             <span
               className={`flex items-center gap-1 ${
-                (stats.trainingScore ?? 100) > 30 && (stats.trainingScore ?? 100) <= 60
+                (stats.trainingScore ?? 100) > 30 &&
+                (stats.trainingScore ?? 100) <= 60
                   ? 'text-warning font-black underline'
                   : 'text-warning/80'
               }`}
@@ -961,7 +972,8 @@ export function PlayerDashboardTab({
                     <span>Faahfaahinta Qaladaadka Kooxda (3-da Heer)</span>
                   </span>
                   <p className="text-[0.6875rem] text-chalk-dim m-0">
-                    Wadarta guud ee qaladaadka aad gashay bishan iyo tirada caadiga ah ee heer kasta
+                    Wadarta guud ee qaladaadka aad gashay bishan iyo tirada
+                    caadiga ah ee heer kasta
                   </p>
                 </div>
                 <div className="flex items-center gap-2 bg-pitch-deep border border-danger/40 px-3 py-1.5 rounded-lg self-start sm:self-auto shadow-sm">
@@ -994,13 +1006,20 @@ export function PlayerDashboardTab({
                     </span>
                   </div>
                   <p className="text-[0.6875rem] text-chalk-dim m-0 leading-tight">
-                    Waxay u dhigantaa: <strong className="text-chalk">{stats.errorsMajor || 0} qalad</strong> oo ah taatiko ama difaac halis galiyay goolka kooxda.
+                    Waxay u dhigantaa:{' '}
+                    <strong className="text-chalk">
+                      {stats.errorsMajor || 0} qalad
+                    </strong>{' '}
+                    oo ah taatiko ama difaac halis galiyay goolka kooxda.
                   </p>
                   {totalPlayerErrors > 0 && (
                     <div className="pt-1.5 text-[0.6875rem] text-chalk-dim border-t border-club-border/40 flex items-center justify-between">
                       <span>Qaybta wadarta:</span>
                       <strong className="text-danger font-bold">
-                        {Math.round(((stats.errorsMajor || 0) / totalPlayerErrors) * 100)}% wadartaada
+                        {Math.round(
+                          ((stats.errorsMajor || 0) / totalPlayerErrors) * 100,
+                        )}
+                        % wadartaada
                       </strong>
                     </div>
                   )}
@@ -1025,13 +1044,20 @@ export function PlayerDashboardTab({
                     </span>
                   </div>
                   <p className="text-[0.6875rem] text-chalk-dim m-0 leading-tight">
-                    Waxay u dhigantaa: <strong className="text-chalk">{stats.errorsMedium || 0} qalad</strong> oo ah baas lumay, luminta booska ama qalad farsamo.
+                    Waxay u dhigantaa:{' '}
+                    <strong className="text-chalk">
+                      {stats.errorsMedium || 0} qalad
+                    </strong>{' '}
+                    oo ah baas lumay, luminta booska ama qalad farsamo.
                   </p>
                   {totalPlayerErrors > 0 && (
                     <div className="pt-1.5 text-[0.6875rem] text-chalk-dim border-t border-club-border/40 flex items-center justify-between">
                       <span>Qaybta wadarta:</span>
                       <strong className="text-warning font-bold">
-                        {Math.round(((stats.errorsMedium || 0) / totalPlayerErrors) * 100)}% wadartaada
+                        {Math.round(
+                          ((stats.errorsMedium || 0) / totalPlayerErrors) * 100,
+                        )}
+                        % wadartaada
                       </strong>
                     </div>
                   )}
@@ -1056,13 +1082,21 @@ export function PlayerDashboardTab({
                     </span>
                   </div>
                   <p className="text-[0.6875rem] text-chalk-dim m-0 leading-tight">
-                    Waxay u dhigantaa: <strong className="text-danger">{stats.errorsSevere || 0} qalad</strong> oo ah anshax xumo, kaar casaan ama gool si sahlan looga dhaliyay.
+                    Waxay u dhigantaa:{' '}
+                    <strong className="text-danger">
+                      {stats.errorsSevere || 0} qalad
+                    </strong>{' '}
+                    oo ah anshax xumo, kaar casaan ama gool si sahlan looga
+                    dhaliyay.
                   </p>
                   {totalPlayerErrors > 0 && (
                     <div className="pt-1.5 text-[0.6875rem] text-chalk-dim border-t border-club-border/40 flex items-center justify-between">
                       <span>Qaybta wadarta:</span>
                       <strong className="text-danger font-bold">
-                        {Math.round(((stats.errorsSevere || 0) / totalPlayerErrors) * 100)}% wadartaada
+                        {Math.round(
+                          ((stats.errorsSevere || 0) / totalPlayerErrors) * 100,
+                        )}
+                        % wadartaada
                       </strong>
                     </div>
                   )}
@@ -1333,7 +1367,8 @@ export function PlayerDashboardTab({
       >
         <form onSubmit={handleSubmitExcuse} className="space-y-4">
           <p className="text-xs text-chalk-dim">
-            Fadlan u sheeg macallinka sababta aad ku maqantahay ama aad ugu daahday tababarka/kulanka maanta ({formattedToday}).
+            Fadlan u sheeg macallinka sababta aad ku maqantahay ama aad ugu
+            daahday tababarka/kulanka maanta ({formattedToday}).
           </p>
 
           <div>
@@ -1369,7 +1404,10 @@ export function PlayerDashboardTab({
           </div>
 
           <div>
-            <label htmlFor="excuse-reason" className="block text-xs font-semibold text-chalk-dim mb-1.5">
+            <label
+              htmlFor="excuse-reason"
+              className="block text-xs font-semibold text-chalk-dim mb-1.5"
+            >
               Sababta Cudurdaarka <span className="text-danger">*</span>
             </label>
             <textarea

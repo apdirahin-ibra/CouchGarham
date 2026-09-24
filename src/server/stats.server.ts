@@ -243,7 +243,8 @@ export async function getPlayerMonthlyStats(
     (manual?.errorsMedium ?? 0) +
     (manual?.errorsSevere ?? 0)
   const effectiveErrors =
-    tierSum > 0 || (manual?.errorsMajor !== null && manual?.errorsMajor !== undefined)
+    tierSum > 0 ||
+    (manual?.errorsMajor !== null && manual?.errorsMajor !== undefined)
       ? tierSum
       : (manual?.errors ?? 0)
 

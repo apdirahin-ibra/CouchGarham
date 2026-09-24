@@ -140,7 +140,8 @@ export function AdminStatsTab() {
     const eMajor = parseInt(editErrorsMajor, 10) || 0
     const eMedium = parseInt(editErrorsMedium, 10) || 0
     const eSevere = parseInt(editErrorsSevere, 10) || 0
-    const computedErrors = eMajor + eMedium + eSevere || parseInt(editErrors, 10) || 0
+    const computedErrors =
+      eMajor + eMedium + eSevere || parseInt(editErrors, 10) || 0
 
     try {
       await updatePlayerMonthlyStatsFn({
@@ -280,10 +281,15 @@ export function AdminStatsTab() {
               </span>
               <strong className="font-display text-2xl font-bold text-chalk">
                 {teamTotals.errors}{' '}
-                <span className="text-xs font-normal text-chalk-dim">qalad</span>
+                <span className="text-xs font-normal text-chalk-dim">
+                  qalad
+                </span>
               </strong>
               <div className="mt-1 flex items-center justify-center gap-1.5 text-[0.625rem] text-chalk-dim pt-1 border-t border-club-border/40">
-                <span title="Qalad Weyn (90%)" className="text-danger font-bold">
+                <span
+                  title="Qalad Weyn (90%)"
+                  className="text-danger font-bold"
+                >
                   90%: {teamTotals.errorsMajor} qalad
                 </span>{' '}
                 •
@@ -457,7 +463,9 @@ export function AdminStatsTab() {
                     </div>
 
                     <div className="flex items-center gap-1.5 bg-pitch-deep border border-danger/40 px-2 py-0.5 rounded text-[0.6875rem]">
-                      <span className="text-chalk-dim font-semibold">Wadarta Qaladaadka:</span>
+                      <span className="text-chalk-dim font-semibold">
+                        Wadarta Qaladaadka:
+                      </span>
                       <strong className="text-danger font-black">
                         {(player.errorsMajor ?? 0) +
                           (player.errorsMedium ?? 0) +
@@ -466,7 +474,7 @@ export function AdminStatsTab() {
                           ? (player.errorsMajor ?? 0) +
                             (player.errorsMedium ?? 0) +
                             (player.errorsSevere ?? 0)
-                          : player.errors ?? 0}{' '}
+                          : (player.errors ?? 0)}{' '}
                         qalad (Total)
                       </strong>
                     </div>
@@ -730,7 +738,9 @@ export function AdminStatsTab() {
                 }`}
               >
                 <div className="text-base">🟢 100%</div>
-                <div className="text-[0.625rem] font-bold mt-0.5">Aad u Fiican</div>
+                <div className="text-[0.625rem] font-bold mt-0.5">
+                  Aad u Fiican
+                </div>
               </button>
 
               <button
@@ -743,7 +753,9 @@ export function AdminStatsTab() {
                 }`}
               >
                 <div className="text-base">🟡 60%</div>
-                <div className="text-[0.625rem] font-bold mt-0.5">Dhexdhexaad</div>
+                <div className="text-[0.625rem] font-bold mt-0.5">
+                  Dhexdhexaad
+                </div>
               </button>
 
               <button
@@ -756,7 +768,9 @@ export function AdminStatsTab() {
                 }`}
               >
                 <div className="text-base">🔴 30%</div>
-                <div className="text-[0.625rem] font-black mt-0.5">Hooseeye (Halis) ⚠️</div>
+                <div className="text-[0.625rem] font-black mt-0.5">
+                  Hooseeye (Halis) ⚠️
+                </div>
               </button>
             </div>
           </div>
@@ -788,7 +802,8 @@ export function AdminStatsTab() {
                   Qaladaadka Kooxda (3-da Qeybood)
                 </label>
                 <p className="text-[0.625rem] text-chalk-dim m-0">
-                  Gali tirada caadiga ah ee qalad kasta, wadartana si toos ah ayaa la isugu darayaa.
+                  Gali tirada caadiga ah ee qalad kasta, wadartana si toos ah
+                  ayaa la isugu darayaa.
                 </p>
               </div>
               <div className="rounded-lg bg-danger/20 border border-danger/40 px-2.5 py-1 text-right">

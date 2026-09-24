@@ -169,7 +169,9 @@ export function AdminAttendanceTab({
 
     setSavingPlayerId(playerId)
     const isCurrentlyExcused = Boolean(player.reason?.trim())
-    const nextReason = isCurrentlyExcused ? '' : 'Cudurdaar la aqbalay (Excused)'
+    const nextReason = isCurrentlyExcused
+      ? ''
+      : 'Cudurdaar la aqbalay (Excused)'
     const nextStatus =
       player.status === 'xadir' || !player.status ? 'maqan' : player.status
 

@@ -736,11 +736,23 @@ export const createScheduleEntryFn = createServerFn({ method: 'POST' })
           dayName: z.string().trim().min(2).max(50),
           timeText: z.string().trim().min(2).max(100),
           place: z.string().trim().min(2).max(150),
-          eventType: z.enum(['tababar', 'ciyaar']).optional().default('tababar'),
+          eventType: z
+            .enum(['tababar', 'ciyaar'])
+            .optional()
+            .default('tababar'),
           opponent: z.string().trim().max(255).optional().nullable(),
-          matchDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+          matchDate: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/)
+            .optional()
+            .nullable(),
           matchTime: z.string().trim().max(50).optional().nullable(),
-          customHoursRemaining: z.string().trim().max(100).optional().nullable(),
+          customHoursRemaining: z
+            .string()
+            .trim()
+            .max(100)
+            .optional()
+            .nullable(),
         })
         .parse(data),
   )
@@ -771,11 +783,23 @@ export const updateScheduleEntryFn = createServerFn({ method: 'POST' })
           dayName: z.string().trim().min(2).max(50),
           timeText: z.string().trim().min(2).max(100),
           place: z.string().trim().min(2).max(150),
-          eventType: z.enum(['tababar', 'ciyaar']).optional().default('tababar'),
+          eventType: z
+            .enum(['tababar', 'ciyaar'])
+            .optional()
+            .default('tababar'),
           opponent: z.string().trim().max(255).optional().nullable(),
-          matchDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+          matchDate: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/)
+            .optional()
+            .nullable(),
           matchTime: z.string().trim().max(50).optional().nullable(),
-          customHoursRemaining: z.string().trim().max(100).optional().nullable(),
+          customHoursRemaining: z
+            .string()
+            .trim()
+            .max(100)
+            .optional()
+            .nullable(),
         })
         .parse(data),
   )

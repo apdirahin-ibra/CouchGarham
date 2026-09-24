@@ -127,7 +127,10 @@ export type QuickToggleFeeInput = z.infer<typeof quickToggleFeeSchema>
 /**
  * Returns the default or configured fee for a given month. Defaults to $0.50 if not specified.
  */
-async function getMonthExpectedFee(db: any, targetMonth: string): Promise<number> {
+async function getMonthExpectedFee(
+  db: any,
+  targetMonth: string,
+): Promise<number> {
   const [firstRecord] = await db
     .select({ expectedAmount: playerFeeRecords.expectedAmount })
     .from(playerFeeRecords)

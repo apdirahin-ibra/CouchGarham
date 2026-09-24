@@ -195,7 +195,7 @@ export async function ensureMatchAlertColumns() {
       ALTER TABLE schedule_entries ADD COLUMN IF NOT EXISTS custom_hours_remaining varchar(100);
     `
     hasEnsuredColumns = true
-  } catch (err) {
+  } catch {
     hasEnsuredColumns = true
   }
 }
@@ -328,7 +328,7 @@ export async function getUpcomingMatchAlert(): Promise<UpcomingMatchAlert | null
       entry.matchTime || entry.timeText,
     )
     let targetDateTime: Date
-    let isToday = false
+    let isToday: boolean
     let matchTargetDateStr = entry.matchDate || ''
 
     if (matchTargetDateStr) {

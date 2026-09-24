@@ -846,7 +846,9 @@ export function AdminPlayersTab() {
                 </span>
                 <strong className="text-lg text-chalk block">
                   {viewingPlayer.currentMonthStats?.errors ?? 0}{' '}
-                  <span className="text-xs font-normal text-chalk-dim">qalad</span>
+                  <span className="text-xs font-normal text-chalk-dim">
+                    qalad
+                  </span>
                 </strong>
                 <div className="mt-0.5 text-[0.5625rem] text-chalk-dim flex justify-center gap-1">
                   <span className="text-danger font-semibold">

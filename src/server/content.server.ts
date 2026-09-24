@@ -325,21 +325,26 @@ export async function getAdminDashboardSummary() {
   const today = getTodayDateString()
   const currentMonth = getCurrentMonthKey()
 
-  const [todayAttendance, recentLogins, monthStats, requestsInbox, upcomingMatchAlert] =
-    await Promise.all([
-      getAttendanceForDate(today),
-      db.select().from(loginLogs).orderBy(desc(loginLogs.loggedInAt)).limit(10),
-      db
-        .select({
-          totalGoals: sql<number>`COALESCE(sum(goals), 0)::int`,
-          totalAssists: sql<number>`COALESCE(sum(assists), 0)::int`,
-          totalErrors: sql<number>`COALESCE(sum(errors), 0)::int`,
-        })
-        .from(playerMonthlyStats)
-        .where(eq(playerMonthlyStats.monthKey, currentMonth)),
-      getRequestsInboxAdmin(),
-      getUpcomingMatchAlert(),
-    ])
+  const [
+    todayAttendance,
+    recentLogins,
+    monthStats,
+    requestsInbox,
+    upcomingMatchAlert,
+  ] = await Promise.all([
+    getAttendanceForDate(today),
+    db.select().from(loginLogs).orderBy(desc(loginLogs.loggedInAt)).limit(10),
+    db
+      .select({
+        totalGoals: sql<number>`COALESCE(sum(goals), 0)::int`,
+        totalAssists: sql<number>`COALESCE(sum(assists), 0)::int`,
+        totalErrors: sql<number>`COALESCE(sum(errors), 0)::int`,
+      })
+      .from(playerMonthlyStats)
+      .where(eq(playerMonthlyStats.monthKey, currentMonth)),
+    getRequestsInboxAdmin(),
+    getUpcomingMatchAlert(),
+  ])
 
   const xadirList = todayAttendance.filter((p) => p.status === 'xadir')
   const maqanList = todayAttendance.filter((p) => p.status === 'maqan')

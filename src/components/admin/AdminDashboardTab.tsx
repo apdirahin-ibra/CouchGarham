@@ -18,7 +18,14 @@ import {
   getTodayDateString,
 } from '../../lib/dates'
 import { getAdminDashboardFn } from '../../server/api'
-import { Button, Dialog, MatchAlarmBanner, SectionTitle, StatTile, TicketCard } from '../ui'
+import {
+  Button,
+  Dialog,
+  MatchAlarmBanner,
+  SectionTitle,
+  StatTile,
+  TicketCard,
+} from '../ui'
 
 type AttendanceListType = 'xadir' | 'maqan' | 'daahay' | 'unrecorded' | null
 

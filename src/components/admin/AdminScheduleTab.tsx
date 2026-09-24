@@ -122,7 +122,8 @@ export function AdminScheduleTab({
           sessionToken: token,
           mode,
           customHours:
-            customHours ?? (mode === 'custom' ? customRemainingInput.trim() : null),
+            customHours ??
+            (mode === 'custom' ? customRemainingInput.trim() : null),
         },
       })
       setActiveAlert(updated)
@@ -176,7 +177,8 @@ export function AdminScheduleTab({
       timeText: timeText.trim(),
       place: place.trim(),
       eventType,
-      opponent: eventType === 'ciyaar' && opponent.trim() ? opponent.trim() : null,
+      opponent:
+        eventType === 'ciyaar' && opponent.trim() ? opponent.trim() : null,
       matchDate:
         eventType === 'ciyaar' && matchDate.trim() ? matchDate.trim() : null,
       matchTime:
@@ -247,7 +249,9 @@ export function AdminScheduleTab({
             <div>
               <span className="text-[0.6875rem] font-black uppercase tracking-wider text-danger flex items-center gap-1.5">
                 <BellRing className="h-3.5 w-3.5" />
-                <span>Digniinta Ciyaarta & Waqtiga ka Dhiman (Admin Controls)</span>
+                <span>
+                  Digniinta Ciyaarta & Waqtiga ka Dhiman (Admin Controls)
+                </span>
               </span>
               <h3 className="font-display text-base sm:text-lg font-bold text-chalk">
                 Dejinta Alarm-ka Ciyaarta & Countdown-ka
@@ -329,7 +333,8 @@ export function AdminScheduleTab({
         {/* Custom input form */}
         <div className="pt-2 border-t border-club-border/60">
           <label className="block text-xs font-bold text-chalk mb-1.5">
-            Ama geli waqti gaar ah oo ka dhiman ciyaarta (Custom Remaining Time):
+            Ama geli waqti gaar ah oo ka dhiman ciyaarta (Custom Remaining
+            Time):
           </label>
           <div className="flex gap-2">
             <input
@@ -351,7 +356,9 @@ export function AdminScheduleTab({
             </Button>
           </div>
           <p className="text-[0.625rem] text-chalk-dim mt-1.5 m-0">
-            Marka aad keydiso, dhammaan ciyaartoyda dashboard-kooda waxaa markiiba uga soo muuqan doona waqtigan alarm-ka iyo badhanka boodboodaya.
+            Marka aad keydiso, dhammaan ciyaartoyda dashboard-kooda waxaa
+            markiiba uga soo muuqan doona waqtigan alarm-ka iyo badhanka
+            boodboodaya.
           </p>
         </div>
       </div>

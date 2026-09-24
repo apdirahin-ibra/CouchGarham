@@ -90,7 +90,11 @@ describe('Training Performance 3-Tier System (Natiijada Tababarka)', () => {
 })
 
 describe('Team Errors 3-Tier Breakdown (Qaladaadka Kooxda)', () => {
-  const calculateTotalErrors = (major90: number, medium60: number, severe30: number) => {
+  const calculateTotalErrors = (
+    major90: number,
+    medium60: number,
+    severe30: number,
+  ) => {
     return major90 + medium60 + severe30
   }
 
@@ -99,7 +103,11 @@ describe('Team Errors 3-Tier Breakdown (Qaladaadka Kooxda)', () => {
     const errorsMedium60 = 3 // Qalad Dhexdhexaad (60%)
     const errorsSevere30 = 1 // Qalad Aad u Xun (30%)
 
-    const total = calculateTotalErrors(errorsMajor90, errorsMedium60, errorsSevere30)
+    const total = calculateTotalErrors(
+      errorsMajor90,
+      errorsMedium60,
+      errorsSevere30,
+    )
     expect(total).toBe(6)
   })
 
@@ -115,9 +123,24 @@ describe('Team Errors 3-Tier Breakdown (Qaladaadka Kooxda)', () => {
     const total = errorsMajor + errorsMedium + errorsSevere
 
     const breakdown = [
-      { tier: 'Qalad Weyn', percentageLabel: '90%', count: errorsMajor, normalCountText: `${errorsMajor} qalad` },
-      { tier: 'Qalad Dhexdhexaad', percentageLabel: '60%', count: errorsMedium, normalCountText: `${errorsMedium} qalad` },
-      { tier: 'Qalad Aad u Xun', percentageLabel: '30%', count: errorsSevere, normalCountText: `${errorsSevere} qalad` },
+      {
+        tier: 'Qalad Weyn',
+        percentageLabel: '90%',
+        count: errorsMajor,
+        normalCountText: `${errorsMajor} qalad`,
+      },
+      {
+        tier: 'Qalad Dhexdhexaad',
+        percentageLabel: '60%',
+        count: errorsMedium,
+        normalCountText: `${errorsMedium} qalad`,
+      },
+      {
+        tier: 'Qalad Aad u Xun',
+        percentageLabel: '30%',
+        count: errorsSevere,
+        normalCountText: `${errorsSevere} qalad`,
+      },
     ]
 
     expect(total).toBe(6)
@@ -139,7 +162,8 @@ describe('Schedule Match Countdown and Time Parsing Logic', () => {
     if (m24) {
       const h = parseInt(m24[1], 10)
       const m = parseInt(m24[2], 10)
-      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return { hours: h, minutes: m }
+      if (h >= 0 && h <= 23 && m >= 0 && m <= 59)
+        return { hours: h, minutes: m }
     }
     const m12 = clean.match(
       /(\d{1,2})(?::(\d{2}))?\s*(AM|PM|am|pm|Galab|Habeen|Subax)?/i,
@@ -164,12 +188,18 @@ describe('Schedule Match Countdown and Time Parsing Logic', () => {
   }
 
   it('accurately parses 24-hr and 12-hr match times', () => {
-    expect(parseTimeToHoursAndMinutes('16:30')).toEqual({ hours: 16, minutes: 30 })
+    expect(parseTimeToHoursAndMinutes('16:30')).toEqual({
+      hours: 16,
+      minutes: 30,
+    })
     expect(parseTimeToHoursAndMinutes('4:30 PM - 6:30 PM')).toEqual({
       hours: 16,
       minutes: 30,
     })
-    expect(parseTimeToHoursAndMinutes('08:00 AM')).toEqual({ hours: 8, minutes: 0 })
+    expect(parseTimeToHoursAndMinutes('08:00 AM')).toEqual({
+      hours: 8,
+      minutes: 0,
+    })
     expect(parseTimeToHoursAndMinutes('5:00 Galabnimo')).toEqual({
       hours: 17,
       minutes: 0,
@@ -204,8 +234,8 @@ describe('Schedule Match Countdown and Time Parsing Logic', () => {
     expect(isWithin12).toBe(true)
     expect(isWithin24).toBe(true)
     expect(alertLevel).toBe('urgent_12h')
-    expect(`Waxaa ka dhiman ${adminCustomInput}!`).toBe('Waxaa ka dhiman 4 saac!')
+    expect(`Waxaa ka dhiman ${adminCustomInput}!`).toBe(
+      'Waxaa ka dhiman 4 saac!',
+    )
   })
 })
-
-
