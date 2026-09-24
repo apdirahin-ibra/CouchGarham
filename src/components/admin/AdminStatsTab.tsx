@@ -276,28 +276,29 @@ export function AdminStatsTab() {
             </div>
             <div className="rounded-xl border border-danger/30 bg-surface-raised p-3 text-center">
               <span className="block text-xs font-bold uppercase text-danger">
-                Qaladaadka (Total)
+                Qaladaadka Kooxda (Total)
               </span>
               <strong className="font-display text-2xl font-bold text-chalk">
-                {teamTotals.errors}
+                {teamTotals.errors}{' '}
+                <span className="text-xs font-normal text-chalk-dim">qalad</span>
               </strong>
-              <div className="mt-1 flex items-center justify-center gap-1 text-[0.625rem] text-chalk-dim">
-                <span title="Qalad Weyn (90%)" className="text-danger font-semibold">
-                  W:{teamTotals.errorsMajor}
+              <div className="mt-1 flex items-center justify-center gap-1.5 text-[0.625rem] text-chalk-dim pt-1 border-t border-club-border/40">
+                <span title="Qalad Weyn (90%)" className="text-danger font-bold">
+                  90%: {teamTotals.errorsMajor} qalad
                 </span>{' '}
                 •
                 <span
                   title="Qalad Dhexdhexaad (60%)"
-                  className="text-warning font-semibold"
+                  className="text-warning font-bold"
                 >
-                  Dh:{teamTotals.errorsMedium}
+                  60%: {teamTotals.errorsMedium} qalad
                 </span>{' '}
                 •
                 <span
                   title="Qalad Aad u Xun (30%)"
-                  className="text-danger font-bold"
+                  className="text-danger font-extrabold"
                 >
-                  X:{teamTotals.errorsSevere}
+                  30%: {teamTotals.errorsSevere} qalad
                 </span>
               </div>
             </div>
@@ -432,7 +433,7 @@ export function AdminStatsTab() {
                     </div>
                   </div>
 
-                  {/* Training Level Badge & Error Breakdown */}
+                  {/* Training Level Badge & Total Errors */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-club-border/60 text-xs">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[0.6875rem] text-chalk-dim font-medium">
@@ -455,25 +456,57 @@ export function AdminStatsTab() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[0.6875rem]">
-                      <span className="text-chalk-dim font-medium">Qaladaadka:</span>
-                      <span
-                        className="text-danger font-semibold"
-                        title="Qalad Weyn (90%)"
-                      >
-                        Weyn(90%): <strong>{player.errorsMajor ?? 0}</strong>
+                    <div className="flex items-center gap-1.5 bg-pitch-deep border border-danger/40 px-2 py-0.5 rounded text-[0.6875rem]">
+                      <span className="text-chalk-dim font-semibold">Wadarta Qaladaadka:</span>
+                      <strong className="text-danger font-black">
+                        {(player.errorsMajor ?? 0) +
+                          (player.errorsMedium ?? 0) +
+                          (player.errorsSevere ?? 0) >
+                        0
+                          ? (player.errorsMajor ?? 0) +
+                            (player.errorsMedium ?? 0) +
+                            (player.errorsSevere ?? 0)
+                          : player.errors ?? 0}{' '}
+                        qalad (Total)
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* 3-Tier Error Breakdown with Normal Numbers & Percentages */}
+                  <div className="grid grid-cols-3 gap-1.5 text-center text-[0.6875rem] pt-1">
+                    <div className="rounded bg-pitch-deep p-1.5 border border-danger/30">
+                      <span className="block text-[0.625rem] text-danger font-bold uppercase">
+                        Qalad Weyn (90%)
                       </span>
-                      <span
-                        className="text-warning font-semibold"
-                        title="Qalad Dhexdhexaad (60%)"
-                      >
-                        Dhex(60%): <strong>{player.errorsMedium ?? 0}</strong>
+                      <strong className="text-sm font-bold text-chalk block">
+                        {player.errorsMajor ?? 0}
+                      </strong>
+                      <span className="block text-[0.5625rem] text-chalk-dim">
+                        {player.errorsMajor ?? 0} qalad
                       </span>
-                      <span
-                        className="text-danger font-bold"
-                        title="Qalad Aad u Xun (30%)"
-                      >
-                        Xun(30%): <strong>{player.errorsSevere ?? 0}</strong>
+                    </div>
+
+                    <div className="rounded bg-pitch-deep p-1.5 border border-warning/30">
+                      <span className="block text-[0.625rem] text-warning font-bold uppercase">
+                        Dhexdhexaad (60%)
+                      </span>
+                      <strong className="text-sm font-bold text-chalk block">
+                        {player.errorsMedium ?? 0}
+                      </strong>
+                      <span className="block text-[0.5625rem] text-chalk-dim">
+                        {player.errorsMedium ?? 0} qalad
+                      </span>
+                    </div>
+
+                    <div className="rounded bg-pitch-deep p-1.5 border border-danger/50 bg-danger/5">
+                      <span className="block text-[0.625rem] text-danger font-bold uppercase">
+                        Aad u Xun (30%)
+                      </span>
+                      <strong className="text-sm font-bold text-danger block">
+                        {player.errorsSevere ?? 0}
+                      </strong>
+                      <span className="block text-[0.5625rem] text-danger/80">
+                        {player.errorsSevere ?? 0} qalad
                       </span>
                     </div>
                   </div>
@@ -748,67 +781,90 @@ export function AdminStatsTab() {
           </div>
 
           {/* Qaladaadka Kooxda ee 3-da Qeybood */}
-          <div className="rounded-xl border border-club-border bg-pitch-deep p-3 space-y-2.5">
+          <div className="rounded-xl border border-club-border bg-pitch-deep p-3.5 space-y-3">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold text-danger uppercase tracking-wider">
-                Qaladaadka Kooxda (3-da Qeybood)
-              </label>
-              <span className="text-[0.6875rem] text-chalk-dim font-bold">
-                Isugeyn:{' '}
-                <strong className="text-danger">
+              <div>
+                <label className="block text-xs font-bold text-danger uppercase tracking-wider">
+                  Qaladaadka Kooxda (3-da Qeybood)
+                </label>
+                <p className="text-[0.625rem] text-chalk-dim m-0">
+                  Gali tirada caadiga ah ee qalad kasta, wadartana si toos ah ayaa la isugu darayaa.
+                </p>
+              </div>
+              <div className="rounded-lg bg-danger/20 border border-danger/40 px-2.5 py-1 text-right">
+                <span className="block text-[0.5625rem] text-chalk-dim font-bold uppercase">
+                  Wadarta Guud (Total)
+                </span>
+                <strong className="text-sm text-danger font-black">
                   {(parseInt(editErrorsMajor, 10) || 0) +
                     (parseInt(editErrorsMedium, 10) || 0) +
-                    (parseInt(editErrorsSevere, 10) || 0)}
+                    (parseInt(editErrorsSevere, 10) || 0)}{' '}
+                  qalad
                 </strong>
-              </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
-              <TextField
-                label="Qalad Weyn (90%)"
-                type="number"
-                value={editErrorsMajor}
-                onChange={(e) => {
-                  setEditErrorsMajor(e.target.value)
-                  const total =
-                    (parseInt(e.target.value, 10) || 0) +
-                    (parseInt(editErrorsMedium, 10) || 0) +
-                    (parseInt(editErrorsSevere, 10) || 0)
-                  setEditErrors(String(total))
-                }}
-                min={0}
-                required
-              />
-              <TextField
-                label="Q. Dhexdhexaad (60%)"
-                type="number"
-                value={editErrorsMedium}
-                onChange={(e) => {
-                  setEditErrorsMedium(e.target.value)
-                  const total =
-                    (parseInt(editErrorsMajor, 10) || 0) +
-                    (parseInt(e.target.value, 10) || 0) +
-                    (parseInt(editErrorsSevere, 10) || 0)
-                  setEditErrors(String(total))
-                }}
-                min={0}
-                required
-              />
-              <TextField
-                label="Q. Aad u Xun (30%)"
-                type="number"
-                value={editErrorsSevere}
-                onChange={(e) => {
-                  setEditErrorsSevere(e.target.value)
-                  const total =
-                    (parseInt(editErrorsMajor, 10) || 0) +
-                    (parseInt(editErrorsMedium, 10) || 0) +
-                    (parseInt(e.target.value, 10) || 0)
-                  setEditErrors(String(total))
-                }}
-                min={0}
-                required
-              />
+              <div>
+                <TextField
+                  label="Qalad Weyn (90%)"
+                  type="number"
+                  value={editErrorsMajor}
+                  onChange={(e) => {
+                    setEditErrorsMajor(e.target.value)
+                    const total =
+                      (parseInt(e.target.value, 10) || 0) +
+                      (parseInt(editErrorsMedium, 10) || 0) +
+                      (parseInt(editErrorsSevere, 10) || 0)
+                    setEditErrors(String(total))
+                  }}
+                  min={0}
+                  required
+                />
+                <span className="text-[0.625rem] text-chalk-dim mt-0.5 block text-center">
+                  {parseInt(editErrorsMajor, 10) || 0} qalad
+                </span>
+              </div>
+              <div>
+                <TextField
+                  label="Q. Dhexdhexaad (60%)"
+                  type="number"
+                  value={editErrorsMedium}
+                  onChange={(e) => {
+                    setEditErrorsMedium(e.target.value)
+                    const total =
+                      (parseInt(editErrorsMajor, 10) || 0) +
+                      (parseInt(e.target.value, 10) || 0) +
+                      (parseInt(editErrorsSevere, 10) || 0)
+                    setEditErrors(String(total))
+                  }}
+                  min={0}
+                  required
+                />
+                <span className="text-[0.625rem] text-chalk-dim mt-0.5 block text-center">
+                  {parseInt(editErrorsMedium, 10) || 0} qalad
+                </span>
+              </div>
+              <div>
+                <TextField
+                  label="Q. Aad u Xun (30%)"
+                  type="number"
+                  value={editErrorsSevere}
+                  onChange={(e) => {
+                    setEditErrorsSevere(e.target.value)
+                    const total =
+                      (parseInt(editErrorsMajor, 10) || 0) +
+                      (parseInt(editErrorsMedium, 10) || 0) +
+                      (parseInt(e.target.value, 10) || 0)
+                    setEditErrors(String(total))
+                  }}
+                  min={0}
+                  required
+                />
+                <span className="text-[0.625rem] text-chalk-dim mt-0.5 block text-center">
+                  {parseInt(editErrorsSevere, 10) || 0} qalad
+                </span>
+              </div>
             </div>
             <p className="text-[0.625rem] text-chalk-dim m-0">
               Qaladaadka waxaa loo kala qaaday 3 heer sida tababarka: Qalad Weyn

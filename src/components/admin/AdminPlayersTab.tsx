@@ -840,13 +840,27 @@ export function AdminPlayersTab() {
                   {viewingPlayer.currentMonthStats?.assists ?? 0}
                 </strong>
               </div>
-              <div className="rounded border border-club-border bg-pitch-deep p-2">
-                <span className="block text-[0.6875rem] text-gold uppercase font-bold">
-                  Qaladaad
+              <div className="rounded border border-danger/40 bg-pitch-deep p-2 text-center">
+                <span className="block text-[0.6875rem] text-danger uppercase font-bold">
+                  Qaladaad (Total)
                 </span>
-                <strong className="text-lg text-chalk">
-                  {viewingPlayer.currentMonthStats?.errors ?? 0}
+                <strong className="text-lg text-chalk block">
+                  {viewingPlayer.currentMonthStats?.errors ?? 0}{' '}
+                  <span className="text-xs font-normal text-chalk-dim">qalad</span>
                 </strong>
+                <div className="mt-0.5 text-[0.5625rem] text-chalk-dim flex justify-center gap-1">
+                  <span className="text-danger font-semibold">
+                    90%: {viewingPlayer.currentMonthStats?.errorsMajor ?? 0}
+                  </span>
+                  <span>•</span>
+                  <span className="text-warning font-semibold">
+                    60%: {viewingPlayer.currentMonthStats?.errorsMedium ?? 0}
+                  </span>
+                  <span>•</span>
+                  <span className="text-danger font-bold">
+                    30%: {viewingPlayer.currentMonthStats?.errorsSevere ?? 0}
+                  </span>
+                </div>
               </div>
             </div>
 

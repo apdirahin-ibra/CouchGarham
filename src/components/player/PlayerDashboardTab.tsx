@@ -924,77 +924,153 @@ export function PlayerDashboardTab({
         <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-2.5">
           <StatTile label="Goolal" value={stats.goals} detail="Bishan" />
           <StatTile label="Caawin" value={stats.assists} detail="Bishan" />
-          <StatTile label="Qaladaad" value={stats.errors} detail="Bishan" />
+          <StatTile
+            label="Qaladaad (Total)"
+            value={
+              (stats.errorsMajor || 0) +
+                (stats.errorsMedium || 0) +
+                (stats.errorsSevere || 0) >
+              0
+                ? (stats.errorsMajor || 0) +
+                  (stats.errorsMedium || 0) +
+                  (stats.errorsSevere || 0)
+                : stats.errors || 0
+            }
+            detail="All la isku daray"
+          />
         </div>
 
         {/* Qaladaadka Kooxda ee 3-da Qeybood (90%, 60%, 30%) */}
-        <div className="mt-3 rounded-xl border border-club-border bg-surface-raised p-3.5 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-gold flex items-center gap-1.5">
-              <ShieldAlert className="h-3.5 w-3.5 text-danger" />
-              <span>Faahfaahinta Qaladaadka Kooxda (3-da Heer)</span>
-            </span>
-            <span className="text-[0.6875rem] font-bold text-chalk-dim">
-              Isugeyn: <strong className="text-danger">{stats.errors}</strong>
-            </span>
-          </div>
+        {(() => {
+          const totalPlayerErrors =
+            (stats.errorsMajor || 0) +
+              (stats.errorsMedium || 0) +
+              (stats.errorsSevere || 0) >
+            0
+              ? (stats.errorsMajor || 0) +
+                (stats.errorsMedium || 0) +
+                (stats.errorsSevere || 0)
+              : stats.errors || 0
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-            {/* Qalad Weyn 90% */}
-            <div className="rounded-lg border border-danger/40 bg-pitch-deep p-2.5 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-danger text-[0.6875rem] uppercase">
-                  Qalad Weyn
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-[0.625rem] font-bold bg-danger/20 text-danger border border-danger/30">
-                  90%
-                </span>
+          return (
+            <div className="mt-3 rounded-xl border border-club-border bg-surface-raised p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2.5 border-b border-club-border/60">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-gold flex items-center gap-1.5">
+                    <ShieldAlert className="h-4 w-4 text-danger" />
+                    <span>Faahfaahinta Qaladaadka Kooxda (3-da Heer)</span>
+                  </span>
+                  <p className="text-[0.6875rem] text-chalk-dim m-0">
+                    Wadarta guud ee qaladaadka aad gashay bishan iyo tirada caadiga ah ee heer kasta
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 bg-pitch-deep border border-danger/40 px-3 py-1.5 rounded-lg self-start sm:self-auto shadow-sm">
+                  <span className="text-xs font-bold text-chalk-dim">
+                    Wadarta Guud (Total):
+                  </span>
+                  <strong className="text-base font-black text-danger">
+                    {totalPlayerErrors} qalad
+                  </strong>
+                </div>
               </div>
-              <strong className="text-lg font-display font-bold text-chalk block">
-                {stats.errorsMajor || 0}
-              </strong>
-              <p className="text-[0.625rem] text-chalk-dim m-0 leading-tight">
-                Qalad taatiko ama difaac oo halis galiyay goolka kooxda.
-              </p>
-            </div>
 
-            {/* Qalad Dhexdhexaad 60% */}
-            <div className="rounded-lg border border-warning/40 bg-pitch-deep p-2.5 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-warning text-[0.6875rem] uppercase">
-                  Qalad Dhexdhexaad
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-[0.625rem] font-bold bg-warning/20 text-warning border border-warning/30">
-                  60%
-                </span>
-              </div>
-              <strong className="text-lg font-display font-bold text-chalk block">
-                {stats.errorsMedium || 0}
-              </strong>
-              <p className="text-[0.625rem] text-chalk-dim m-0 leading-tight">
-                Baas lumay, luminta booska ama qalad farsamo.
-              </p>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                {/* Qalad Weyn 90% */}
+                <div className="rounded-xl border border-danger/40 bg-pitch-deep p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-danger text-xs uppercase">
+                      Qalad Weyn
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[0.6875rem] font-black bg-danger/20 text-danger border border-danger/30">
+                      90%
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <strong className="text-2xl font-display font-extrabold text-chalk">
+                      {stats.errorsMajor || 0}
+                    </strong>
+                    <span className="text-xs font-semibold text-danger">
+                      qalad (tiro caadi ah)
+                    </span>
+                  </div>
+                  <p className="text-[0.6875rem] text-chalk-dim m-0 leading-tight">
+                    Waxay u dhigantaa: <strong className="text-chalk">{stats.errorsMajor || 0} qalad</strong> oo ah taatiko ama difaac halis galiyay goolka kooxda.
+                  </p>
+                  {totalPlayerErrors > 0 && (
+                    <div className="pt-1.5 text-[0.6875rem] text-chalk-dim border-t border-club-border/40 flex items-center justify-between">
+                      <span>Qaybta wadarta:</span>
+                      <strong className="text-danger font-bold">
+                        {Math.round(((stats.errorsMajor || 0) / totalPlayerErrors) * 100)}% wadartaada
+                      </strong>
+                    </div>
+                  )}
+                </div>
 
-            {/* Qalad Aad u Xun 30% */}
-            <div className="rounded-lg border border-danger/60 bg-danger/10 p-2.5 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-danger text-[0.6875rem] uppercase">
-                  Qalad Aad u Xun
-                </span>
-                <span className="px-1.5 py-0.5 rounded text-[0.625rem] font-bold bg-danger/30 text-danger border border-danger/50">
-                  30%
-                </span>
+                {/* Qalad Dhexdhexaad 60% */}
+                <div className="rounded-xl border border-warning/40 bg-pitch-deep p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-warning text-xs uppercase">
+                      Qalad Dhexdhexaad
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[0.6875rem] font-black bg-warning/20 text-warning border border-warning/30">
+                      60%
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <strong className="text-2xl font-display font-extrabold text-chalk">
+                      {stats.errorsMedium || 0}
+                    </strong>
+                    <span className="text-xs font-semibold text-warning">
+                      qalad (tiro caadi ah)
+                    </span>
+                  </div>
+                  <p className="text-[0.6875rem] text-chalk-dim m-0 leading-tight">
+                    Waxay u dhigantaa: <strong className="text-chalk">{stats.errorsMedium || 0} qalad</strong> oo ah baas lumay, luminta booska ama qalad farsamo.
+                  </p>
+                  {totalPlayerErrors > 0 && (
+                    <div className="pt-1.5 text-[0.6875rem] text-chalk-dim border-t border-club-border/40 flex items-center justify-between">
+                      <span>Qaybta wadarta:</span>
+                      <strong className="text-warning font-bold">
+                        {Math.round(((stats.errorsMedium || 0) / totalPlayerErrors) * 100)}% wadartaada
+                      </strong>
+                    </div>
+                  )}
+                </div>
+
+                {/* Qalad Aad u Xun 30% */}
+                <div className="rounded-xl border border-danger/60 bg-danger/10 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-danger text-xs uppercase">
+                      Qalad Aad u Xun
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[0.6875rem] font-black bg-danger/30 text-danger border border-danger/50">
+                      30%
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <strong className="text-2xl font-display font-extrabold text-danger">
+                      {stats.errorsSevere || 0}
+                    </strong>
+                    <span className="text-xs font-semibold text-danger">
+                      qalad (tiro caadi ah)
+                    </span>
+                  </div>
+                  <p className="text-[0.6875rem] text-chalk-dim m-0 leading-tight">
+                    Waxay u dhigantaa: <strong className="text-danger">{stats.errorsSevere || 0} qalad</strong> oo ah anshax xumo, kaar casaan ama gool si sahlan looga dhaliyay.
+                  </p>
+                  {totalPlayerErrors > 0 && (
+                    <div className="pt-1.5 text-[0.6875rem] text-chalk-dim border-t border-club-border/40 flex items-center justify-between">
+                      <span>Qaybta wadarta:</span>
+                      <strong className="text-danger font-bold">
+                        {Math.round(((stats.errorsSevere || 0) / totalPlayerErrors) * 100)}% wadartaada
+                      </strong>
+                    </div>
+                  )}
+                </div>
               </div>
-              <strong className="text-lg font-display font-bold text-danger block">
-                {stats.errorsSevere || 0}
-              </strong>
-              <p className="text-[0.625rem] text-chalk-dim m-0 leading-tight">
-                Qalad anshax xumo, kaar casaan ama gool si sahlan looga dhaliyay.
-              </p>
             </div>
-          </div>
-        </div>
+          )
+        })()}
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3">

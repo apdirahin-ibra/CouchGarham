@@ -47,18 +47,26 @@ export async function getCurrentMonthRosterStats(
     .where(eq(playerMonthlyStats.monthKey, monthKey))
 
   const manualMap = new Map(
-    manualStats.map((s) => [
-      s.playerId,
-      {
-        goals: s.goals,
-        assists: s.assists,
-        errors: s.errors,
-        trainingScore: s.trainingScore ?? 100,
-        errorsMajor: s.errorsMajor ?? 0,
-        errorsMedium: s.errorsMedium ?? 0,
-        errorsSevere: s.errorsSevere ?? 0,
-      },
-    ]),
+    manualStats.map((s) => {
+      const tierSum =
+        (s.errorsMajor ?? 0) + (s.errorsMedium ?? 0) + (s.errorsSevere ?? 0)
+      const effectiveErrors =
+        tierSum > 0 || (s.errorsMajor !== null && s.errorsMajor !== undefined)
+          ? tierSum
+          : s.errors
+      return [
+        s.playerId,
+        {
+          goals: s.goals,
+          assists: s.assists,
+          errors: effectiveErrors,
+          trainingScore: s.trainingScore ?? 100,
+          errorsMajor: s.errorsMajor ?? 0,
+          errorsMedium: s.errorsMedium ?? 0,
+          errorsSevere: s.errorsSevere ?? 0,
+        },
+      ]
+    }),
   )
 
   // Attendance counts for this month using bounded date comparison
@@ -141,8 +149,13 @@ export async function updatePlayerMonthlyStats(input: {
   const eMajor = Math.max(0, input.errorsMajor ?? 0)
   const eMed = Math.max(0, input.errorsMedium ?? 0)
   const eSev = Math.max(0, input.errorsSevere ?? 0)
-  const totalErrors =
-    input.errors !== undefined
+  const hasTierInput =
+    input.errorsMajor !== undefined ||
+    input.errorsMedium !== undefined ||
+    input.errorsSevere !== undefined
+  const totalErrors = hasTierInput
+    ? eMajor + eMed + eSev
+    : input.errors !== undefined
       ? Math.max(0, input.errors)
       : eMajor + eMed + eSev
   const trainingScore =
@@ -225,11 +238,20 @@ export async function getPlayerMonthlyStats(
     else if (row.status === 'daahay') daahay = row.count
   }
 
+  const tierSum =
+    (manual?.errorsMajor ?? 0) +
+    (manual?.errorsMedium ?? 0) +
+    (manual?.errorsSevere ?? 0)
+  const effectiveErrors =
+    tierSum > 0 || (manual?.errorsMajor !== null && manual?.errorsMajor !== undefined)
+      ? tierSum
+      : (manual?.errors ?? 0)
+
   return {
     monthKey,
     goals: manual?.goals ?? 0,
     assists: manual?.assists ?? 0,
-    errors: manual?.errors ?? 0,
+    errors: effectiveErrors,
     trainingScore: manual?.trainingScore ?? 100,
     errorsMajor: manual?.errorsMajor ?? 0,
     errorsMedium: manual?.errorsMedium ?? 0,

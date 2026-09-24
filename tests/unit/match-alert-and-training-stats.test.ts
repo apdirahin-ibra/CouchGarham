@@ -107,4 +107,26 @@ describe('Team Errors 3-Tier Breakdown (Qaladaadka Kooxda)', () => {
     const total = calculateTotalErrors(0, 0, 0)
     expect(total).toBe(0)
   })
+
+  it('maps each percentage tier to its normal error count and percentage share', () => {
+    const errorsMajor = 2
+    const errorsMedium = 3
+    const errorsSevere = 1
+    const total = errorsMajor + errorsMedium + errorsSevere
+
+    const breakdown = [
+      { tier: 'Qalad Weyn', percentageLabel: '90%', count: errorsMajor, normalCountText: `${errorsMajor} qalad` },
+      { tier: 'Qalad Dhexdhexaad', percentageLabel: '60%', count: errorsMedium, normalCountText: `${errorsMedium} qalad` },
+      { tier: 'Qalad Aad u Xun', percentageLabel: '30%', count: errorsSevere, normalCountText: `${errorsSevere} qalad` },
+    ]
+
+    expect(total).toBe(6)
+    expect(breakdown[0].normalCountText).toBe('2 qalad')
+    expect(breakdown[1].normalCountText).toBe('3 qalad')
+    expect(breakdown[2].normalCountText).toBe('1 qalad')
+
+    const majorShare = Math.round((breakdown[0].count / total) * 100)
+    expect(majorShare).toBe(33)
+  })
 })
+
