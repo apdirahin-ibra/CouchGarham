@@ -74,6 +74,7 @@ import {
   deleteScheduleEntry,
   getScheduleAttendanceBreakdown,
   getScheduleList,
+  setMatchCountdownAlert,
   updateScheduleEntry,
 } from './schedule.server'
 import {
@@ -726,6 +727,8 @@ export const createScheduleEntryFn = createServerFn({ method: 'POST' })
       eventType?: 'tababar' | 'ciyaar'
       opponent?: string | null
       matchDate?: string | null
+      matchTime?: string | null
+      customHoursRemaining?: string | null
     }) =>
       z
         .object({
@@ -736,6 +739,8 @@ export const createScheduleEntryFn = createServerFn({ method: 'POST' })
           eventType: z.enum(['tababar', 'ciyaar']).optional().default('tababar'),
           opponent: z.string().trim().max(255).optional().nullable(),
           matchDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+          matchTime: z.string().trim().max(50).optional().nullable(),
+          customHoursRemaining: z.string().trim().max(100).optional().nullable(),
         })
         .parse(data),
   )
@@ -756,6 +761,8 @@ export const updateScheduleEntryFn = createServerFn({ method: 'POST' })
       eventType?: 'tababar' | 'ciyaar'
       opponent?: string | null
       matchDate?: string | null
+      matchTime?: string | null
+      customHoursRemaining?: string | null
     }) =>
       z
         .object({
@@ -767,6 +774,8 @@ export const updateScheduleEntryFn = createServerFn({ method: 'POST' })
           eventType: z.enum(['tababar', 'ciyaar']).optional().default('tababar'),
           opponent: z.string().trim().max(255).optional().nullable(),
           matchDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+          matchTime: z.string().trim().max(50).optional().nullable(),
+          customHoursRemaining: z.string().trim().max(100).optional().nullable(),
         })
         .parse(data),
   )
@@ -774,6 +783,39 @@ export const updateScheduleEntryFn = createServerFn({ method: 'POST' })
     const actor = await resolveActorFromToken(data.sessionToken)
     requireAdmin(actor)
     return updateScheduleEntry(data.id, data)
+  })
+
+export const setMatchCountdownAlertFn = createServerFn({ method: 'POST' })
+  .validator(
+    (data: {
+      sessionToken: string
+      mode: 'auto' | 'custom' | 'match_day' | 'urgent_12h' | 'warning_24h'
+      customHours?: string | null
+      scheduleId?: string | null
+    }) =>
+      z
+        .object({
+          sessionToken: z.string().max(256),
+          mode: z.enum([
+            'auto',
+            'custom',
+            'match_day',
+            'urgent_12h',
+            'warning_24h',
+          ]),
+          customHours: z.string().trim().max(100).optional().nullable(),
+          scheduleId: z.string().trim().max(100).optional().nullable(),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const actor = await resolveActorFromToken(data.sessionToken)
+    requireAdmin(actor)
+    return setMatchCountdownAlert({
+      mode: data.mode,
+      customHours: data.customHours,
+      scheduleId: data.scheduleId,
+    })
   })
 
 export const deleteScheduleEntryFn = createServerFn({ method: 'POST' })
@@ -1252,6 +1294,10 @@ export const updateClubSettingsFn = createServerFn({ method: 'POST' })
       rulesText?: string
       announcementText?: string
       announcementAudioPath?: string | null
+      adminWhatsapp?: string | null
+      matchAlertMode?: string
+      matchAlertCustomHours?: string | null
+      matchAlertScheduleId?: string | null
     }) =>
       z
         .object({
@@ -1259,6 +1305,10 @@ export const updateClubSettingsFn = createServerFn({ method: 'POST' })
           rulesText: z.string().max(20000).optional(),
           announcementText: z.string().max(2000).optional(),
           announcementAudioPath: z.string().max(1000).optional().nullable(),
+          adminWhatsapp: z.string().max(50).optional().nullable(),
+          matchAlertMode: z.string().max(50).optional(),
+          matchAlertCustomHours: z.string().max(100).optional().nullable(),
+          matchAlertScheduleId: z.string().max(100).optional().nullable(),
         })
         .parse(data),
   )

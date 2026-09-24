@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   AlertCircle,
+  BellRing,
   CheckCircle,
+  Clock,
   Edit,
+  Flame,
   MapPin,
   Plus,
   RefreshCw,
@@ -17,6 +20,7 @@ import {
   deleteScheduleEntryFn,
   getScheduleAttendanceBreakdownFn,
   getScheduleListFn,
+  setMatchCountdownAlertFn,
   updateScheduleEntryFn,
 } from '../../server/api'
 import { Button, Dialog, SectionTitle, TextField, TicketCard } from '../ui'
@@ -30,6 +34,8 @@ type ScheduleItem = {
   eventType?: string | null
   opponent?: string | null
   matchDate?: string | null
+  matchTime?: string | null
+  customHoursRemaining?: string | null
 }
 
 export function AdminScheduleTab({
@@ -57,7 +63,13 @@ export function AdminScheduleTab({
   const [eventType, setEventType] = useState<'tababar' | 'ciyaar'>('tababar')
   const [opponent, setOpponent] = useState('')
   const [matchDate, setMatchDate] = useState('')
+  const [matchTime, setMatchTime] = useState('')
+  const [customHoursRemaining, setCustomHoursRemaining] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+
+  const [activeAlert, setActiveAlert] = useState<any>(null)
+  const [customRemainingInput, setCustomRemainingInput] = useState('')
+  const [isUpdatingAlert, setIsUpdatingAlert] = useState(false)
 
   const loadSchedules = useCallback(async () => {
     if (!token) return
@@ -98,6 +110,35 @@ export function AdminScheduleTab({
     }
   }, [expandedDay, loadDayBreakdown])
 
+  const handleSetCountdownAlert = async (
+    mode: 'auto' | 'custom' | 'match_day' | 'urgent_12h' | 'warning_24h',
+    customHours?: string,
+  ) => {
+    if (!token) return
+    setIsUpdatingAlert(true)
+    try {
+      const updated = await setMatchCountdownAlertFn({
+        data: {
+          sessionToken: token,
+          mode,
+          customHours:
+            customHours ?? (mode === 'custom' ? customRemainingInput.trim() : null),
+        },
+      })
+      setActiveAlert(updated)
+      notify(
+        mode === 'auto'
+          ? 'Digniinta ciyaarta waxaa si toos ah loogu xiray jadwalka!'
+          : `Waqtiga ciyaarta waa la cusbooneysiiyay: ${customHours || customRemainingInput || mode}`,
+        'success',
+      )
+    } catch (err: any) {
+      notify(err?.message || 'Qalad ayaa dhacay dejinta waqtiga', 'danger')
+    } finally {
+      setIsUpdatingAlert(false)
+    }
+  }
+
   const openAddModal = () => {
     setEditingSchedule(null)
     setDayName('Isniin')
@@ -106,6 +147,8 @@ export function AdminScheduleTab({
     setEventType('tababar')
     setOpponent('')
     setMatchDate('')
+    setMatchTime('16:30')
+    setCustomHoursRemaining('')
     setIsModalOpen(true)
   }
 
@@ -117,6 +160,8 @@ export function AdminScheduleTab({
     setEventType(item.eventType === 'ciyaar' ? 'ciyaar' : 'tababar')
     setOpponent(item.opponent || '')
     setMatchDate(item.matchDate || '')
+    setMatchTime(item.matchTime || '')
+    setCustomHoursRemaining(item.customHoursRemaining || '')
     setIsModalOpen(true)
   }
 
@@ -134,6 +179,12 @@ export function AdminScheduleTab({
       opponent: eventType === 'ciyaar' && opponent.trim() ? opponent.trim() : null,
       matchDate:
         eventType === 'ciyaar' && matchDate.trim() ? matchDate.trim() : null,
+      matchTime:
+        eventType === 'ciyaar' && matchTime.trim() ? matchTime.trim() : null,
+      customHoursRemaining:
+        eventType === 'ciyaar' && customHoursRemaining.trim()
+          ? customHoursRemaining.trim()
+          : null,
     }
 
     try {
@@ -186,6 +237,125 @@ export function AdminScheduleTab({
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Qaybta Digniinta Ciyaarta & Waqtiga ka Dhiman (Admin Match Alarm Controls) */}
+      <div className="rounded-2xl border-2 border-danger/60 bg-gradient-to-r from-danger/20 via-pitch-deep to-surface-raised p-4 sm:p-5 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-club-border/60">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-danger/25 text-danger border border-danger/60 animate-pulse">
+              <Flame className="h-6 w-6" />
+            </div>
+            <div>
+              <span className="text-[0.6875rem] font-black uppercase tracking-wider text-danger flex items-center gap-1.5">
+                <BellRing className="h-3.5 w-3.5" />
+                <span>Digniinta Ciyaarta & Waqtiga ka Dhiman (Admin Controls)</span>
+              </span>
+              <h3 className="font-display text-base sm:text-lg font-bold text-chalk">
+                Dejinta Alarm-ka Ciyaarta & Countdown-ka
+              </h3>
+            </div>
+          </div>
+          <span className="text-xs text-chalk-dim self-start sm:self-auto bg-pitch-deep px-3 py-1.5 rounded-lg border border-club-border">
+            Ku xir jadwalka ama toos u geli waqtiga
+          </span>
+        </div>
+
+        {/* Current status banner */}
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-pitch-deep/90 border border-gold/40 p-3 rounded-xl">
+          <div className="flex items-center gap-2 text-xs">
+            <Clock className="h-4 w-4 text-gold shrink-0" />
+            <span className="text-chalk-dim">Xaaladda hadda:</span>
+            <strong className="text-gold font-bold">
+              {activeAlert?.hoursRemainingText ||
+                'Jadwalka ciyaarta ayaa toos u xisaabinaya waqtiga ka dhiman'}
+            </strong>
+          </div>
+          {activeAlert?.isCustomAdminTime && (
+            <span className="text-[0.6875rem] font-bold px-2 py-0.5 rounded bg-danger/20 text-danger border border-danger/40">
+              Gacan ku Geli (Admin Override)
+            </span>
+          )}
+        </div>
+
+        {/* Preset 1-click buttons */}
+        <div className="space-y-2">
+          <span className="text-xs font-bold text-chalk-dim block">
+            Dooro habka digniinta (1-Guji):
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              type="button"
+              disabled={isUpdatingAlert}
+              onClick={() => handleSetCountdownAlert('auto')}
+              className="py-2.5 px-3 rounded-xl border border-gold/50 bg-gold/15 text-gold hover:bg-gold/25 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>🔄 Toos Jadwalka (Auto)</span>
+            </button>
+            <button
+              type="button"
+              disabled={isUpdatingAlert}
+              onClick={() =>
+                handleSetCountdownAlert(
+                  'match_day',
+                  'Maanta waa Maalintii Ciyaarta! (0 saac)',
+                )
+              }
+              className="py-2.5 px-3 rounded-xl border border-danger/60 bg-danger/20 text-danger hover:bg-danger/30 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer"
+            >
+              <Flame className="h-4 w-4" />
+              <span>⚽ Maanta (0 Saac)</span>
+            </button>
+            <button
+              type="button"
+              disabled={isUpdatingAlert}
+              onClick={() => handleSetCountdownAlert('urgent_12h', '12 saac')}
+              className="py-2.5 px-3 rounded-xl border border-danger/60 bg-danger/20 text-danger hover:bg-danger/30 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer"
+            >
+              <BellRing className="h-4 w-4 animate-pulse" />
+              <span>🔥 12 Saac ka Dhiman</span>
+            </button>
+            <button
+              type="button"
+              disabled={isUpdatingAlert}
+              onClick={() => handleSetCountdownAlert('warning_24h', '24 saac')}
+              className="py-2.5 px-3 rounded-xl border border-amber-500/60 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer"
+            >
+              <Clock className="h-4 w-4" />
+              <span>⚠️ 24 Saac ka Dhiman</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Custom input form */}
+        <div className="pt-2 border-t border-club-border/60">
+          <label className="block text-xs font-bold text-chalk mb-1.5">
+            Ama geli waqti gaar ah oo ka dhiman ciyaarta (Custom Remaining Time):
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={customRemainingInput}
+              onChange={(e) => setCustomRemainingInput(e.target.value)}
+              placeholder="e.g. 4 saac, 2 saac iyo 30 daqiiqo, ama 45 daqiiqo"
+              className="ui-input flex-1 text-xs"
+            />
+            <Button
+              type="button"
+              variant="primary"
+              disabled={!customRemainingInput.trim() || isUpdatingAlert}
+              busy={isUpdatingAlert}
+              onClick={() => handleSetCountdownAlert('custom')}
+              className="text-xs px-4"
+            >
+              Keydi Waqtiga
+            </Button>
+          </div>
+          <p className="text-[0.625rem] text-chalk-dim mt-1.5 m-0">
+            Marka aad keydiso, dhammaan ciyaartoyda dashboard-kooda waxaa markiiba uga soo muuqan doona waqtigan alarm-ka iyo badhanka boodboodaya.
+          </p>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <SectionTitle eyebrow="JADWALKA TABABARKA & KULAMADA" as="h2">
@@ -436,11 +606,25 @@ export function AdminScheduleTab({
                 placeholder="e.g. Banaadir FC ama Horseed SC"
                 required
               />
+              <div className="grid grid-cols-2 gap-2">
+                <TextField
+                  label="Taariikhda Kulanka (YYYY-MM-DD)"
+                  value={matchDate}
+                  onChange={(e) => setMatchDate(e.target.value)}
+                  placeholder="e.g. 2026-09-25"
+                />
+                <TextField
+                  label="Saacadda Bilaabashada (Kickoff)"
+                  value={matchTime}
+                  onChange={(e) => setMatchTime(e.target.value)}
+                  placeholder="e.g. 16:30 ama 4:30 PM"
+                />
+              </div>
               <TextField
-                label="Taariikhda Kulanka (Ikhtiyaari - YYYY-MM-DD)"
-                value={matchDate}
-                onChange={(e) => setMatchDate(e.target.value)}
-                placeholder="e.g. 2026-09-21"
+                label="Waqtiga ka Dhiman Ciyaarta (Admin Override / Ikhtiyaari)"
+                value={customHoursRemaining}
+                onChange={(e) => setCustomHoursRemaining(e.target.value)}
+                placeholder="e.g. 4 saac, 12 saac (haddii kale toos ayuu u xisaabinayaa)"
               />
             </>
           )}

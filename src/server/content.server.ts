@@ -211,6 +211,9 @@ export async function updateClubSettings(input: {
   announcementText?: string
   announcementAudioPath?: string | null
   adminWhatsapp?: string | null
+  matchAlertMode?: string
+  matchAlertCustomHours?: string | null
+  matchAlertScheduleId?: string | null
 }): Promise<ClubSettings> {
   const db = getDatabase()
   // Ensure default exists first
@@ -228,6 +231,15 @@ export async function updateClubSettings(input: {
         : {}),
       ...(input.adminWhatsapp !== undefined
         ? { adminWhatsapp: input.adminWhatsapp }
+        : {}),
+      ...(input.matchAlertMode !== undefined
+        ? { matchAlertMode: input.matchAlertMode }
+        : {}),
+      ...(input.matchAlertCustomHours !== undefined
+        ? { matchAlertCustomHours: input.matchAlertCustomHours }
+        : {}),
+      ...(input.matchAlertScheduleId !== undefined
+        ? { matchAlertScheduleId: input.matchAlertScheduleId }
         : {}),
       updatedAt: new Date(),
     })

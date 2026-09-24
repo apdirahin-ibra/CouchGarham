@@ -6,14 +6,19 @@ import {
   Clock,
   Flame,
   MapPin,
+  RefreshCw,
+  Settings,
   ShieldAlert,
   Volume2,
   VolumeX,
 } from 'lucide-react'
 
+import { useAuth } from '../../lib/auth-client'
 import { formatSomaliDate } from '../../lib/dates'
+import { setMatchCountdownAlertFn } from '../../server/api'
 import type { UpcomingMatchAlert } from '../../server/schedule.server'
 import { Button, Dialog } from './index'
+import { useToast } from './toast-context'
 
 interface MatchAlarmBannerProps {
   alert: UpcomingMatchAlert | null | undefined
@@ -67,47 +72,68 @@ export function MatchAlarmBanner({
   alert,
   onNavigateToTab,
 }: MatchAlarmBannerProps) {
+  const { user, token } = useAuth()
+  const { notify } = useToast()
+  const isAdmin = user?.role === 'admin'
+
+  const [currentAlert, setCurrentAlert] = useState<UpcomingMatchAlert | null | undefined>(alert)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [isAudioActive, setIsAudioActive] = useState(false)
-  const [simulatedState, setSimulatedState] = useState<
-    'match_day' | 'urgent_12h' | 'warning_24h' | null
-  >(null)
+  const [adminCustomInput, setAdminCustomInput] = useState('')
+  const [isSavingCountdown, setIsSavingCountdown] = useState(false)
   const intervalRef = useRef<any>(null)
 
-  if (!alert || !alert.hasUpcomingMatch) {
+  useEffect(() => {
+    setCurrentAlert(alert)
+  }, [alert])
+
+  const effectiveAlert = currentAlert || alert
+
+  if (!effectiveAlert || !effectiveAlert.hasUpcomingMatch) {
     return null
   }
 
-  const isMatchDay =
-    simulatedState === 'match_day' ||
-    (!simulatedState && Boolean(alert.isMatchDay))
-  const isWithin12Hours =
-    simulatedState === 'urgent_12h' ||
-    simulatedState === 'match_day' ||
-    (!simulatedState && Boolean(alert.isWithin12Hours))
-  const isWithin24Hours =
-    simulatedState === 'warning_24h' ||
-    simulatedState === 'urgent_12h' ||
-    simulatedState === 'match_day' ||
-    (!simulatedState && Boolean(alert.isWithin24Hours))
-
-  const hoursRemainingText =
-    simulatedState === 'match_day'
-      ? 'Maanta waa Maalintii Ciyaarta! ⚽'
-      : simulatedState === 'urgent_12h'
-        ? 'Waxaa ka dhiman wax ka yar 12 saac (6h)!'
-        : simulatedState === 'warning_24h'
-          ? 'Waxaa ka dhiman wax ka yar 24 saac (18h)!'
-          : alert.hoursRemainingText
-
   const {
+    isMatchDay,
+    isWithin12Hours,
+    isWithin24Hours,
+    hoursRemainingText,
     matchTitle,
     opponent,
     timeText,
     place,
     matchDate,
     dayName,
-  } = alert
+  } = effectiveAlert
+
+  const handleAdminSetCountdown = async (
+    mode: 'auto' | 'custom' | 'match_day' | 'urgent_12h' | 'warning_24h',
+    customHours?: string,
+  ) => {
+    if (!token) return
+    setIsSavingCountdown(true)
+    try {
+      const updated = await setMatchCountdownAlertFn({
+        data: {
+          sessionToken: token,
+          mode,
+          customHours:
+            customHours ?? (mode === 'custom' ? adminCustomInput.trim() : null),
+        },
+      })
+      setCurrentAlert(updated)
+      notify(
+        mode === 'auto'
+          ? 'Digniinta ciyaarta waxaa lagu xiray jadwalka tooska ah!'
+          : `Waqtiga ciyaarta waa la cusbooneysiiyay: ${customHours || adminCustomInput || mode}`,
+        'success',
+      )
+    } catch (err: any) {
+      notify(err?.message || 'Qalad ayaa dhacay dejinta waqtiga', 'danger')
+    } finally {
+      setIsSavingCountdown(false)
+    }
+  }
 
   const toggleAlarmSound = () => {
     if (isAudioActive) {
@@ -224,8 +250,20 @@ export function MatchAlarmBanner({
             </div>
           </div>
 
-          {/* Right section: Bouncing Button & Alarm Sound Toggle */}
-          <div className="flex items-center gap-2.5 sm:self-center shrink-0">
+          {/* Right section: Bouncing Button, Settings & Alarm Sound Toggle */}
+          <div className="flex items-center gap-2 sm:self-center shrink-0">
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowDetailsModal(true)}
+                title="Deji Waqtiga ka Dhiman Ciyaarta (Admin Countdown Settings)"
+                className="flex h-11 px-3 items-center justify-center gap-1.5 rounded-xl border border-gold/40 bg-gold/10 text-gold hover:bg-gold/20 text-xs font-bold transition-all cursor-pointer shadow-md"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Deji Waqtiga</span>
+              </button>
+            )}
+
             {/* Alarm Sound Synthesizer Button */}
             <button
               type="button"
@@ -336,56 +374,102 @@ export function MatchAlarmBanner({
             </ul>
           </div>
 
-          {/* Interactive Warning Level Test Selector */}
-          <div className="rounded-xl border border-club-border bg-pitch-deep p-3 space-y-2 text-xs">
-            <span className="font-bold text-gold uppercase tracking-wider block text-[0.6875rem]">
-              🎮 Tijaabi Heerarka Digniinta (Test Warning Modes):
-            </span>
-            <div className="grid grid-cols-3 gap-1.5 text-center">
-              <button
-                type="button"
-                onClick={() => setSimulatedState('match_day')}
-                className={`py-1.5 px-2 rounded-lg text-[0.6875rem] font-bold border transition-all cursor-pointer ${
-                  isMatchDay && (!simulatedState || simulatedState === 'match_day')
-                    ? 'bg-danger text-white border-danger shadow-md'
-                    : 'bg-surface text-danger border-danger/40 hover:bg-danger/10'
-                }`}
-              >
-                ⚽ Maanta (0h)
-              </button>
-              <button
-                type="button"
-                onClick={() => setSimulatedState('urgent_12h')}
-                className={`py-1.5 px-2 rounded-lg text-[0.6875rem] font-bold border transition-all cursor-pointer ${
-                  simulatedState === 'urgent_12h' || (!simulatedState && alert.isWithin12Hours && !alert.isMatchDay)
-                    ? 'bg-danger text-white border-danger shadow-md'
-                    : 'bg-surface text-danger border-danger/40 hover:bg-danger/10'
-                }`}
-              >
-                🔥 12 Saac Ka Dhiman
-              </button>
-              <button
-                type="button"
-                onClick={() => setSimulatedState('warning_24h')}
-                className={`py-1.5 px-2 rounded-lg text-[0.6875rem] font-bold border transition-all cursor-pointer ${
-                  simulatedState === 'warning_24h' || (!simulatedState && alert.isWithin24Hours && !alert.isWithin12Hours)
-                    ? 'bg-amber-500 text-pitch-black border-amber-500 shadow-md font-extrabold'
-                    : 'bg-surface text-amber-400 border-amber-400/40 hover:bg-amber-400/10'
-                }`}
-              >
-                ⚠️ 24 Saac Ka Dhiman
-              </button>
+          {/* Admin Real Countdown Settings Section */}
+          {isAdmin ? (
+            <div className="rounded-xl border-2 border-danger/60 bg-gradient-to-r from-danger/20 via-pitch-deep to-surface-raised p-3.5 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-danger uppercase tracking-wider block text-[0.6875rem] flex items-center gap-1.5">
+                  <Flame className="h-4 w-4" />
+                  <span>⚙️ Deji Waqtiga ka Dhiman Ciyaarta (Admin Live Settings)</span>
+                </span>
+                <span className="text-[0.625rem] text-gold font-bold">
+                  Toos u gal dhammaan ciyaartoyda
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-center">
+                <button
+                  type="button"
+                  disabled={isSavingCountdown}
+                  onClick={() => handleAdminSetCountdown('auto')}
+                  className="py-2 px-2 rounded-lg text-[0.6875rem] font-bold border border-gold/50 bg-gold/15 text-gold hover:bg-gold/25 transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>🔄 Toos Jadwalka</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingCountdown}
+                  onClick={() =>
+                    handleAdminSetCountdown(
+                      'match_day',
+                      'Maanta waa Maalintii Ciyaarta! (0 saac)',
+                    )
+                  }
+                  className="py-2 px-2 rounded-lg text-[0.6875rem] font-bold border border-danger/60 bg-danger/20 text-danger hover:bg-danger/30 transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5"
+                >
+                  <Flame className="h-3.5 w-3.5" />
+                  <span>⚽ Maanta (0h)</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingCountdown}
+                  onClick={() =>
+                    handleAdminSetCountdown('urgent_12h', '12 saac')
+                  }
+                  className="py-2 px-2 rounded-lg text-[0.6875rem] font-bold border border-danger/60 bg-danger/20 text-danger hover:bg-danger/30 transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5"
+                >
+                  <BellRing className="h-3.5 w-3.5 animate-pulse" />
+                  <span>🔥 12 Saac ka Dhiman</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingCountdown}
+                  onClick={() =>
+                    handleAdminSetCountdown('warning_24h', '24 saac')
+                  }
+                  className="py-2 px-2 rounded-lg text-[0.6875rem] font-bold border border-amber-500/60 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>⚠️ 24 Saac ka Dhiman</span>
+                </button>
+              </div>
+
+              <div className="pt-2 border-t border-club-border/40 flex gap-2">
+                <input
+                  type="text"
+                  value={adminCustomInput}
+                  onChange={(e) => setAdminCustomInput(e.target.value)}
+                  placeholder="Geli waqti kale: e.g. 4 saac ama 30 daqiiqo"
+                  className="ui-input flex-1 text-xs py-1.5"
+                />
+                <Button
+                  type="button"
+                  variant="primary"
+                  disabled={!adminCustomInput.trim() || isSavingCountdown}
+                  busy={isSavingCountdown}
+                  onClick={() => handleAdminSetCountdown('custom')}
+                  className="text-xs py-1.5 px-3"
+                >
+                  Keydi
+                </Button>
+              </div>
             </div>
-            {simulatedState && (
-              <button
-                type="button"
-                onClick={() => setSimulatedState(null)}
-                className="w-full text-center text-[0.625rem] text-gold underline hover:text-gold-hover pt-1 cursor-pointer"
-              >
-                Dib ugu noqo xisaabinta tooska ah (Live Mode)
-              </button>
-            )}
-          </div>
+          ) : (
+            /* Player read-only note */
+            <div className="rounded-xl border border-club-border bg-pitch-deep p-3 text-xs text-chalk-dim flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-gold" />
+                <span>Waqtiga ka dhiman:</span>
+                <strong className="text-gold font-bold">
+                  {effectiveAlert.hoursRemainingText}
+                </strong>
+              </span>
+              <span className="text-[0.625rem] text-chalk-dim italic">
+                Waqtiga jadwalka rasmiga ah
+              </span>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-2 border-t border-club-border">
             {onNavigateToTab ? (

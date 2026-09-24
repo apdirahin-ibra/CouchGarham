@@ -70,6 +70,8 @@ export const scheduleEntries = pgTable('schedule_entries', {
   eventType: varchar('event_type', { length: 50 }).default('tababar').notNull(),
   opponent: varchar('opponent', { length: 255 }),
   matchDate: varchar('match_date', { length: 10 }),
+  matchTime: varchar('match_time', { length: 50 }),
+  customHoursRemaining: varchar('custom_hours_remaining', { length: 100 }),
   ...auditColumns(),
 })
 
@@ -100,6 +102,9 @@ export const clubSettings = pgTable('club_settings', {
   announcementText: text('announcement_text').notNull().default(''),
   announcementAudioPath: text('announcement_audio_path'),
   adminWhatsapp: varchar('admin_whatsapp', { length: 50 }),
+  matchAlertMode: varchar('match_alert_mode', { length: 50 }).default('auto').notNull(),
+  matchAlertCustomHours: varchar('match_alert_custom_hours', { length: 100 }),
+  matchAlertScheduleId: varchar('match_alert_schedule_id', { length: 100 }),
   updatedAt: timestamp('updated_at', {
     mode: 'date',
     precision: 3,
